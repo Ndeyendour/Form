@@ -1,0 +1,25 @@
+<svg viewBox="0 0 935 1210" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<style>
+.g0_4{fill:#4E738A;}
+.g1_4{fill:none;stroke:#4E738A;stroke-width:3.055;stroke-miterlimit:10;}
+.g2_4{fill:none;stroke:#4E738A;stroke-width:21.39;stroke-miterlimit:10;}
+.g3_4{fill:#FFF;}
+</style>
+</defs>
+<path d="M61.3 1180.8c6.6 0 12-5.5 12-12.1c0-6.7-5.4-12.1-12-12.1c-6.7 0-12.1 5.4-12.1 12.1c0 6.6 5.4 12.1 12.1 12.1Z" class="g0_4"/>
+<path d="M48.6 56.2H887.4" class="g1_4"/>
+<path d="M48.6 67.9H73.4" class="g2_4"/>
+<path d="M890.3 1119.8v0m0-31.6v31.6H922v-31.6H890.3m0 0v31.6H922v-31.6H890.3Z" class="g3_4"/>
+<path d="M889.4 1147.8v0m0-31.7v31.7h31.7v-31.7H889.4m0 0v31.7h31.7v-31.7H889.4Z" class="g3_4"/>
+<path d="M866.7 1127.2v0m0-57.3v57.3H924v-57.3H866.7m0 0v57.3H924v-57.3H866.7Z" class="g3_4"/>
+<path d="M30 1201.2H851.4l57.2-57.3H87.3L30 1201.2m0-57.3v57.3H87.3v-57.3H30m821.4 0v57.3h57.2v-57.3H851.4Z" class="g3_4"/>
+<path d="M45 128.7H883.8" class="g1_4"/>
+<path d="M45.1 140.4H69.8" class="g2_4"/>
+<path d="M43.5 464.7H882.3" class="g1_4"/>
+<path d="M43.6 476.4H68.3" class="g2_4"/>
+<path d="M41.6 633.4H880.4" class="g1_4"/>
+<path d="M41.6 645.1H66.4" class="g2_4"/>
+<path d="M43.5 779.2H882.3" class="g1_4"/>
+<path d="M43.6 790.9H68.3" class="g2_4"/>
+</svg>

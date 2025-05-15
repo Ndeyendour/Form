@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulaire - Contrat de gestion immobilière</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f8fa;
+      padding: 30px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #004080;
+    }
+
+    form {
+      background-color: #fff;
+      padding: 25px;
+      max-width: 900px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+    }
+
+    fieldset {
+      margin-bottom: 30px;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+
+    legend {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #0056b3;
+      padding: 0 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: #fff;
+      box-sizing: border-box;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+
+    .btn-submit {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: block;
+      margin: 30px auto 0;
+    }
+
+    .btn-submit:hover {
+      background-color: #0056b3;
+    }
+
+    .signature-box {
+      border: 1px dashed #999;
+      height: 100px;
+      margin-top: 10px;
+      background-color: #f9f9f9;
+    }
+
+    .signature-pad-container {
+      border: 1px solid #ccc;
+      width: 100%;
+      height: 150px;
+      background-color: #fff;
+      margin-top: 10px;
+    }
+
+    .signature-pad {
+      width: 100%;
+      height: 100%;
+      background-color: #fff;
+    }
+
+    @media print {
+      body {
+        visibility: hidden;
+      }
+      #gestionForm {
+        visibility: visible;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Contrat de gestion immobilière</h1>
+  <form id="gestionForm">
+    <input type="hidden" name="_to" value="info@keurgui.sn">
+    <input type="hidden" name="_subject" value="Nouveau contrat de gestion immobilière - Keurgui">
+    
+    <fieldset>
+      <legend>Identification de l'agence</legend>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Nom de l'agence:</label>
+          <input type="text" name="nom_agence" required>
+        </div>
+        <div class="flex-50">
+          <label>Représenté par:</label>
+          <input type="text" name="representant_agence" required>
+        </div>
+      </div>
+      <label>Adresse, téléphone, courriel:</label>
+      <textarea name="coordonnees_agence" required></textarea>
+      <label><input type="checkbox" name="societe_agence"> Exerce au sein de la société</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Locateur 1</legend>
+      <!-- Content of the first locateur (unchanged) -->
+    </fieldset>
+
+    <fieldset>
+      <legend>Articles du contrat</legend>
+      <!-- Content of the contract articles (unchanged) -->
+    </fieldset>
+
+    <fieldset>
+      <legend>Signatures</legend>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Nom et fonction du Propriétaire:</label>
+          <input type="text" name="nom_proprietaire" required>
+        </div>
+        <div class="flex-50">
+          <label>Signature autorisée du Propriétaire:</label>
+          <div id="signature-pad-owner" class="signature-pad-container">
+            <canvas id="signature-pad-owner-canvas" class="signature-pad"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Nom et fonction de l'Agent:</label>
+          <input type="text" name="nom_agent" required>
+        </div>
+        <div class="flex-50">
+          <label>Signature autorisée de l'Agent:</label>
+          <div id="signature-pad-agent" class="signature-pad-container">
+            <canvas id="signature-pad-agent-canvas" class="signature-pad"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Lieu de signature:</label>
+          <input type="text" name="lieu_signature" required>
+        </div>
+        <div class="flex-50">
+          <label>Date de signature:</label>
+          <input type="date" name="date_signature" required>
+        </div>
+      </div>
+      <div>
+        <button type="button" onclick="clearSignature('owner')" class="btn-submit">Effacer la signature du Propriétaire</button>
+        <button type="button" onclick="clearSignature('agent')" class="btn-submit">Effacer la signature de l'Agent</button>
+      </div>
+    </fieldset>
+
+    <button type="button" onclick="submitGestionForm()" class="btn-submit">Envoyer le contrat</button>
+  </form>
+
+  <script>
+    let signaturePadOwner, signaturePadAgent;
+
+    window.onload = function() {
+      // Initialisation des pads de signature
+      signaturePadOwner = new SignaturePad(document.getElementById('signature-pad-owner-canvas'));
+      signaturePadAgent = new SignaturePad(document.getElementById('signature-pad-agent-canvas'));
+    };
+
+    function clearSignature(role) {
+      if (role === 'owner') {
+        signaturePadOwner.clear();
+      } else if (role === 'agent') {
+        signaturePadAgent.clear();
+      }
+    }
+
+    // Fonction d'envoi du formulaire
+    async function submitGestionForm() {
+      const form = document.getElementById("gestionForm");
+
+      // Ajouter les données des signatures sous forme d'image base64
+      const ownerSignature = signaturePadOwner.toDataURL();
+      const agentSignature = signaturePadAgent.toDataURL();
+
+      const formData = new FormData(form);
+      formData.append("owner_signature", ownerSignature);
+      formData.append("agent_signature", agentSignature);
+
+      // Options pour le PDF
+      const opt = {
+        margin: 10,
+        filename: 'contrat-gestion.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      try {
+        // Afficher un loader
+        const btn = document.querySelector('.btn-submit');
+        btn.disabled = true;
+        btn.textContent = 'Génération du PDF...';
+
+        // 1. Générer le PDF
+        const pdfBlob = await html2pdf()
+          .set(opt)
+          .from(form)
+          .toPdf()
+          .output('blob');
+
+        // 2. Préparer les données
+        formData.append("pdf", pdfBlob, "contrat-gestion.pdf");
+
+        // 3. Envoyer au serveur
+        const response = await fetch("http://localhost:3000/submit-form", {
+          method: "POST",
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+          alert("Contrat envoyé avec succès !");
+        } else {
+          alert("Erreur: " + (result.error || "Échec d'envoi"));
+        }
+      } catch (error) {
+        console.error("Erreur complète:", error);
+        alert("Erreur lors de la génération ou de l'envoi");
+      } finally {
+        // Réactiver le bouton
+        const btn = document.querySelector('.btn-submit');
+        btn.disabled = false;
+        btn.textContent = 'Envoyer le contrat';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrat de Courtage Keurgui</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        } 
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+        h2 {
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .form-section {
+            margin-bottom: 30px;
+            border: 1px solid #eee;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="date"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .signature-box {
+            border: 1px dashed #999;
+            height: 100px;
+            margin-top: 10px;
+            background-color: #f9f9f9;
+        }
+        .btn-submit {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 30px auto;
+        }
+        .btn-submit:hover {
+            background-color: #2980b9;
+        }
+        .checkbox-group {
+            margin: 10px 0;
+        }
+        .two-column {
+            display: flex;
+            gap: 20px;
+        }
+        .two-column > div {
+            flex: 1;
+        }
+        @media (max-width: 768px) {
+            .two-column {
+                flex-direction: column;
+            }
+        }
+        @media print {
+            body {
+                visibility: hidden;
+            }
+            #courtageForm {
+                visibility: visible;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+        input[type="checkbox"] {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>CONTRAT DE COURTAGE EXCLUSIF - VENTE</h1>
+    
+    <form id="courtageForm">
+         <input type="hidden" name="_to" value="info@keurgui.sn">
+        <input type="hidden" name="_subject" value="Nouveau contrat de courtage - Keurgui">
+        
+        <div class="form-section">
+            <h2>1. IDENTIFICATION DES PARTIES</h2>
+            
+            <h3>1.1 AGENCE DE COURTAGE</h3>
+            <div class="form-group">
+                <label for="agence_nom">Nom de l'agence :</label>
+                <input type="text" id="agence_nom" name="agence_nom" required>
+            </div>
+            
+            <div class="two-column">
+                <div>
+                    <div class="form-group">
+                        <label for="agence_adresse">Adresse :</label>
+                        <input type="text" id="agence_adresse" name="agence_adresse" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="agence_telephone">Téléphone :</label>
+                        <input type="tel" id="agence_telephone" name="agence_telephone" required>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label for="agence_email">Email :</label>
+                        <input type="email" id="agence_email" name="agence_email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="agence_representant">Représenté par :</label>
+                        <input type="text" id="agence_representant" name="agence_representant" required>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>1.2 VENDEUR</h3>
+            <div class="two-column">
+                <div>
+                    <h4>Vendeur 1</h4>
+                    <div class="form-group">
+                        <label for="vendeur1_nom">Nom complet :</label>
+                        <input type="text" id="vendeur1_nom" name="vendeur1_nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_adresse">Adresse :</label>
+                        <input type="text" id="vendeur1_adresse" name="vendeur1_adresse" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_telephone">Téléphone :</label>
+                        <input type="tel" id="vendeur1_telephone" name="vendeur1_telephone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_email">Email :</label>
+                        <input type="email" id="vendeur1_email" name="vendeur1_email">
+                    </div>
+                </div>
+                <div>
+                    <h4>Vendeur 2 (le cas échéant)</h4>
+                    <div class="form-group">
+                        <label for="vendeur2_nom">Nom complet :</label>
+                        <input type="text" id="vendeur2_nom" name="vendeur2_nom">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_adresse">Adresse :</label>
+                        <input type="text" id="vendeur2_adresse" name="vendeur2_adresse">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_telephone">Téléphone :</label>
+                        <input type="tel" id="vendeur2_telephone" name="vendeur2_telephone">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_email">Email :</label>
+                        <input type="email" id="vendeur2_email" name="vendeur2_email">
+                    </div>
+                </div>
+            </div>
+            
+            <h3>1.3 VÉRIFICATION D'IDENTITÉ</h3>
+            <div class="two-column">
+                <div>
+                    <h4>Vendeur 1 ou représentant</h4>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="vendeur1_cni" name="vendeur1_piece" value="CNI">
+                        <label for="vendeur1_cni">Carte d'identité</label>
+                        <input type="checkbox" id="vendeur1_passeport" name="vendeur1_piece" value="Passeport">
+                        <label for="vendeur1_passeport">Passeport</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_piece_numero">Numéro du document :</label>
+                        <input type="text" id="vendeur1_piece_numero" name="vendeur1_piece_numero">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_piece_pays">Pays/Région d'émission :</label>
+                        <input type="text" id="vendeur1_piece_pays" name="vendeur1_piece_pays">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_piece_expiration">Date d'expiration :</label>
+                        <input type="date" id="vendeur1_piece_expiration" name="vendeur1_piece_expiration">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_naissance">Date de naissance :</label>
+                        <input type="date" id="vendeur1_naissance" name="vendeur1_naissance">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur1_profession">Profession :</label>
+                        <input type="text" id="vendeur1_profession" name="vendeur1_profession">
+                    </div>
+                </div>
+                <div>
+                    <h4>Vendeur 2 ou représentant</h4>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="vendeur2_cni" name="vendeur2_piece" value="CNI">
+                        <label for="vendeur2_cni">Carte d'identité</label>
+                        <input type="checkbox" id="vendeur2_passeport" name="vendeur2_piece" value="Passeport">
+                        <label for="vendeur2_passeport">Passeport</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_piece_numero">Numéro du document :</label>
+                        <input type="text" id="vendeur2_piece_numero" name="vendeur2_piece_numero">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_piece_pays">Pays/Région d'émission :</label>
+                        <input type="text" id="vendeur2_piece_pays" name="vendeur2_piece_pays">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_piece_expiration">Date d'expiration :</label>
+                        <input type="date" id="vendeur2_piece_expiration" name="vendeur2_piece_expiration">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_naissance">Date de naissance :</label>
+                        <input type="date" id="vendeur2_naissance" name="vendeur2_naissance">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendeur2_profession">Profession :</label>
+                        <input type="text" id="vendeur2_profession" name="vendeur2_profession">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>2. OBJET ET DURÉE DU CONTRAT</h2>
+            <div class="form-group">
+                <label for="contract_end_date">Date de fin du contrat :</label>
+                <input type="date" id="contract_end_date" name="contract_end_date" required>
+            </div>
+            <div class="form-group">
+                <label>Conditions de résiliation :</label>
+                <p>Le présent contrat peut être résilié sans motif par le Vendeur. Dans ce cas, le Vendeur pourra être tenu de rembourser à l'AGENCE les frais et dépenses engagés jusqu'à la date de résiliation.</p>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>3. DESCRIPTION DE L'IMMEUBLE</h2>
+            <div class="form-group">
+                <label for="immeuble_designation">Désignation cadastrale :</label>
+                <input type="text" id="immeuble_designation" name="immeuble_designation" required>
+            </div>
+            <div class="form-group">
+                <label for="immeuble_superficie">Superficie (en m²) :</label>
+                <input type="number" id="immeuble_superficie" name="immeuble_superficie" required>
+            </div>
+            <div class="form-group">
+                <label for="immeuble_description">Description complémentaire :</label>
+                <textarea id="immeuble_description" name="immeuble_description" rows="4"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>4. PRIX ET CONDITIONS DE VENTE</h2>
+            <div class="form-group">
+                <label for="prix_vente">Prix de vente demandé (FCFA) :</label>
+                <input type="number" id="prix_vente" name="prix_vente" required>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="tva_applicable" name="tva_applicable" value="oui">
+                <label for="tva_applicable">L'immeuble est assujetti à la TVA</label>
+            </div>
+            <div class="form-group">
+                <label for="inclusions">Inclusions dans la vente :</label>
+                <textarea id="inclusions" name="inclusions" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="exclusions">Exclusions de la vente :</label>
+                <textarea id="exclusions" name="exclusions" rows="3"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>5. SIGNATURE DE L'ACTE DE VENTE ET OCCUPATION</h2>
+            <div class="form-group">
+                <label for="date_acte">Date ou délai de signature de l'acte de vente :</label>
+                <input type="text" id="date_acte" name="date_acte">
+            </div>
+            <div class="form-group">
+                <label for="date_occupation">Date ou délai d'occupation :</label>
+                <input type="text" id="date_occupation" name="date_occupation">
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>6. RÉTRIBUTION</h2>
+            <div class="checkbox-group">
+                <input type="radio" id="remuneration_percent" name="remuneration_type" value="pourcentage" checked>
+                <label for="remuneration_percent">Pourcentage du prix de vente :</label>
+                <input type="number" id="remuneration_percent_value" name="remuneration_percent_value" min="0" max="100" step="0.1" style="width: 80px;"> %
+            </div>
+            <div class="checkbox-group">
+                <input type="radio" id="remuneration_fixed" name="remuneration_type" value="forfait">
+                <label for="remuneration_fixed">Somme forfaitaire (FCFA) :</label>
+                <input type="number" id="remuneration_fixed_value" name="remuneration_fixed_value" disabled>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>7. SIGNATURES</h2>
+            
+            <h3>L'Agence</h3>
+            <div class="form-group">
+                <label for="agence_signature_lieu">Lieu de signature :</label>
+                <input type="text" id="agence_signature_lieu" name="agence_signature_lieu">
+            </div>
+            <div class="form-group">
+                <label for="agence_signature_date">Date :</label>
+                <input type="date" id="agence_signature_date" name="agence_signature_date">
+            </div>
+           <div class="form-group">
+                <label>Signature :</label>
+                <canvas class="signature-canvas" width="400" height="100" style="border: 1px dashed #999;"></canvas>
+                <button type="button" onclick="clearSignature(this)">Effacer</button>
+            </div>
+
+            
+            <h3>Vendeur 1</h3>
+            <div class="form-group">
+                <label for="vendeur1_signature_lieu">Lieu de signature :</label>
+                <input type="text" id="vendeur1_signature_lieu" name="vendeur1_signature_lieu">
+            </div>
+            <div class="form-group">
+                <label for="vendeur1_signature_date">Date :</label>
+                <input type="date" id="vendeur1_signature_date" name="vendeur1_signature_date">
+            </div>
+            <div class="form-group">
+                <label>Signature :</label>
+                <canvas class="signature-canvas" width="400" height="100" style="border: 1px dashed #999;"></canvas>
+                <button type="button" onclick="clearSignature(this)">Effacer</button>
+            </div>
+            
+            <h3>Vendeur 2 (le cas échéant)</h3>
+            <div class="form-group">
+                <label for="vendeur2_signature_lieu">Lieu de signature :</label>
+                <input type="text" id="vendeur2_signature_lieu" name="vendeur2_signature_lieu">
+            </div>
+            <div class="form-group">
+                <label for="vendeur2_signature_date">Date :</label>
+                <input type="date" id="vendeur2_signature_date" name="vendeur2_signature_date">
+            </div>
+           <div class="form-group">
+    <label>Signature :</label>
+    <canvas class="signature-canvas" width="400" height="100" style="border: 1px dashed #999;"></canvas>
+    <button type="button" onclick="clearSignature(this)">Effacer</button>
+</div>
+
+        </div>
+        
+        <button type="button" onclick="submitCourtageForm()" class="btn-submit">Envoyer le contrat</button>
+    </form>
+
+    <script>
+          const signaturePads = [];
+
+    document.querySelectorAll('.signature-canvas').forEach((canvas) => {
+        const signaturePad = new SignaturePad(canvas);
+        signaturePads.push(signaturePad);
+    });
+
+    function clearSignature(button) {
+        const canvas = button.previousElementSibling;
+        const pad = signaturePads.find(p => p.canvas === canvas);
+        if (pad) pad.clear();
+    }
+
+    function getSignatureImages() {
+        return signaturePads.map(pad => pad.isEmpty() ? null : pad.toDataURL());
+    }
+        // Fonction d'envoi du formulaire
+        async function submitCourtageForm() {
+            const form = document.getElementById("courtageForm");
+            
+            // Options pour le PDF
+            const opt = {
+                margin: 10,
+                filename: 'contrat-courtage.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                // Afficher un loader
+                const btn = document.querySelector('.btn-submit');
+                btn.disabled = true;
+                btn.textContent = 'Envoie en cour...';
+
+                // 1. Générer le PDF
+                const pdfBlob = await html2pdf()
+                    .set(opt)
+                    .from(form)
+                    .toPdf()
+                    .output('blob');
+
+                // 2. Préparer les données
+                const formData = new FormData(form);
+                formData.append("pdf", pdfBlob, "contrat-courtage.pdf");
+
+                // 3. Envoyer au serveur
+                const response = await fetch("http://localhost:3000/submit-form", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert("Contrat envoyé avec succès !");
+                } else {
+                    alert("Erreur: " + (result.error || "Échec d'envoi"));
+                }
+            } catch (error) {
+                console.error("Erreur complète:", error);
+                alert("Erreur lors de la génération ou de l'envoi");
+            } finally {
+                // Réactiver le bouton
+                const btn = document.querySelector('.btn-submit');
+                btn.disabled = false;
+                btn.textContent = 'Envoyer le contrat';
+            }
+        }
+
+        // Gestion des champs de rémunération
+        document.getElementById('remuneration_percent').addEventListener('change', function() {
+            document.getElementById('remuneration_percent_value').disabled = !this.checked;
+            document.getElementById('remuneration_fixed_value').disabled = this.checked;
+        });
+
+        document.getElementById('remuneration_fixed').addEventListener('change', function() {
+            document.getElementById('remuneration_percent_value').disabled = this.checked;
+            document.getElementById('remuneration_fixed_value').disabled = !this.checked;
+        });
+
+        // Gestion des cases à cocher pour les pièces d'identité
+        const vendeur1Pieces = document.querySelectorAll('input[name="vendeur1_piece"]');
+        vendeur1Pieces.forEach(piece => {
+            piece.addEventListener('change', function() {
+                if(this.checked) {
+                    vendeur1Pieces.forEach(p => {
+                        if(p !== this) p.checked = false;
+                    });
+                }
+            });
+        });
+        
+        const vendeur2Pieces = document.querySelectorAll('input[name="vendeur2_piece"]');
+        vendeur2Pieces.forEach(piece => {
+            piece.addEventListener('change', function() {
+                if(this.checked) {
+                    vendeur2Pieces.forEach(p => {
+                        if(p !== this) p.checked = false;
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

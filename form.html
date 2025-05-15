@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html style="width: 100%; height: 100%;">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta charset="utf-8" />
+    <title></title>
+    
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="assets/formviewer.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="assets/formviewer.js" type="text/javascript"></script>
+    <script src="assets/formvuapi.js" type="text/javascript"></script>
+    <script type="text/javascript">
+	
+(function() {
+"use strict";
+
+/**
+ * Shorthand helper function to getElementById
+ * @param id
+ * @returns {Element}
+ */
+var d = function (id) {
+    return document.getElementById(id);
+};
+
+var ClassHelper = (function() {
+    return {
+        addClass: function(ele, name) {
+            var classes = ele.className.length !== 0 ? ele.className.split(" ") : [];
+            var index = classes.indexOf(name);
+            if (index === -1) {
+                classes.push(name);
+                ele.className = classes.join(" ");
+            }
+        },
+
+        removeClass: function(ele, name) {
+            var classes = ele.className.length !== 0 ? ele.className.split(" ") : [];
+            var index = classes.indexOf(name);
+            if (index !== -1) {
+                classes.splice(index, 1);
+            }
+            ele.className = classes.join(" ");
+        }
+    };
+})();
+
+var Button = {};
+
+FormViewer.on('ready', function(data) {
+    // Grab buttons
+    Button.zoomIn = d('btnZoomIn');
+    Button.zoomOut = d('btnZoomOut');
+
+    if (Button.zoomIn) {
+        Button.zoomIn.onclick = function(e) { FormViewer.zoomIn(); e.preventDefault(); };
+    }
+    if (Button.zoomOut) {
+        Button.zoomOut.onclick = function(e) { FormViewer.zoomOut(); e.preventDefault(); };
+    }
+
+    document.title = data.title ? data.title : data.fileName;
+    var pageLabels = data.pageLabels;
+    var btnPage = d('btnPage');
+    if (btnPage != null) {
+        btnPage.innerHTML = pageLabels.length ? pageLabels[data.page - 1] : data.page;
+        btnPage.title = data.page + " of " + data.pagecount;
+
+        FormViewer.on('pagechange', function(data) {
+            d('btnPage').innerHTML = pageLabels.length ? pageLabels[data.page - 1] : data.page;
+            d('btnPage').title = data.page + " of " + data.pagecount;
+        });
+    }
+
+    if (idrform.app) {
+        idrform.app.execFunc = idrform.app.execMenuItem;
+        idrform.app.execMenuItem = function (str) {
+            switch (str.toUpperCase()) {
+                case "FIRSTPAGE":
+                    idrform.app.activeDocs[0].pageNum = 0;
+                    FormViewer.goToPage(1);
+                    break;
+                case "LASTPAGE":
+                    idrform.app.activeDocs[0].pageNum = FormViewer.config.pagecount - 1;
+                    FormViewer.goToPage(FormViewer.config.pagecount);
+                    break;
+                case "NEXTPAGE":
+                    idrform.app.activeDocs[0].pageNum++;
+                    FormViewer.next();
+                    break;
+                case "PREVPAGE":
+                    idrform.app.activeDocs[0].pageNum--;
+                    FormViewer.prev();
+                    break;
+                default:
+                    idrform.app.execFunc(str);
+                    break;
+            }
+        }
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.target != null) {
+            switch (e.target.constructor) {
+                case HTMLInputElement:
+                case HTMLTextAreaElement:
+                case HTMLVideoElement:
+                case HTMLAudioElement:
+                case HTMLSelectElement:
+                    return;
+                default:
+                    break;
+            }
+        }
+        switch (e.keyCode) {
+            case 33: // Page Up
+                FormViewer.prev();
+                e.preventDefault();
+                break;
+            case 34: // Page Down
+                FormViewer.next();
+                e.preventDefault();
+                break;
+            case 37: // Left Arrow
+                data.isR2L ? FormViewer.next() : FormViewer.prev();
+                e.preventDefault();
+                break;
+            case 39: // Right Arrow
+                data.isR2L ? FormViewer.prev() : FormViewer.next();
+                e.preventDefault();
+                break;
+            case 36: // Home
+                FormViewer.goToPage(1);
+                e.preventDefault();
+                break;
+            case 35: // End
+                FormViewer.goToPage(data.pagecount);
+                e.preventDefault();
+                break;
+        }
+    });
+});
+
+window.addEventListener("beforeprint", function(event) {
+    FormViewer.setZoom(FormViewer.ZOOM_AUTO);
+});
+
+})();
+</script>
+<style type="text/css">
+.btn{border:0 none; height:30px; padding:0; width:30px; background-color:transparent; display:inline-block; margin:7px 5px 0; vertical-align:top; cursor:pointer; color:#fff;}
+.btn:hover{background-color:#0e1319; color:#eddbd9; border-radius:5px;}
+.page{box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);}
+#formviewer{bottom:0; left:0; right:0; position:absolute; top:40px; background:#191f2f none repeat scroll 0 0;}
+body{padding:0px; margin:0px; background-color:#191f2f;}
+#FDFXFA_Menu{text-align:center; width:100%; z-index:9999; color:white;background-color:#707784; position:fixed; font-size:32px; margin:0px; opacity:0.8; top:0px; min-width:300px; min-height: 40px;}
+#FDFXFA_Menu a{cursor:pointer; border-radius:5px; padding:5px; font-family: IDRSymbols; margin:5px 10px 5px 10px;}
+#FDFXFA_PageLabel{padding-left:5px;font-size:20px}
+#FDFXFA_PageCount{padding-right:5px;font-size:20px}
+#FDFXFA_Menu a:hover{background-color:#0e1319; color:#eddbd9;}
+#FDFXFA_PageLabel{min-width:20px;display:inline-block;}
+#FDFXFA_Processing{width:100%; height:100%; z-index:10000; position:fixed; background-color:black; opacity:0.8; color:white; top:0px;text-align: center; font-size:300px; font-family:IDRSymbols;}
+#FDFXFA_Processing span{top:50%;left:50%;margin:-50px 0 0 -50px}
+#FDFXFA_FormType,#FDFXFA_Form,#FDFXFA_PDFName,#FDFXFA_PDFID,#FDFXFA_FormSubmitURL{display:none;}
+.editable_combo {position:relative;}
+.editable_combo select {position:absolute; top:0px; left:0px; font-size: inherit; border:none; height:100%; width:100%; margin:0;background-color: transparent}
+.editable_combo input {position:absolute; top:0px; left:0px; font-size: inherit; height:calc(100% - 2px); width:calc(100% - 25px); padding:1px 4px; border:none;}
+.editable_combo select:focus, .select-editable input:focus {outline:none;}
+@font-face {font-family:'IDRSymbols'; src: url(data:application/x-font-woff;charset=utf-8;base64,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) format('woff'); font-weight:normal; font-style:normal;}
+@media print {
+#FDFXFA_Menu,#FDFXFA_Menu a,#FDFXFA_Menu label,#FDFXFA_Menu button{display:none}
+#formviewer{overflow: visible}
+div.page{box-shadow: none;}
+}
+</style>
+</head>
+<body style="margin: 0;" onload='idrform.init()'>
+<script type="text/javascript" src="js/formvuacroform.js"></script>
+<script type="text/javascript" src="js/EmbeddedScript.js"></script>
+<div id='FDFXFA_Processing'>&#xF010;</div>
+<div id='FDFXFA_FormType'>AcroForm</div>
+<div id='FDFXFA_PDFName'>Keurgui Contrat de gestion immobilière.pdf</div>
+<div id='FDFXFA_PDFID'>A96EFD7E6FA46040AA2798EA126AE6A2</div>
+<div id='FDFXFA_Menu'><a title='Submit Form' onclick="FormViewer.handleFormSubmission('', 'formdata')">&#xF018;</a><a title='Go To FirstPage' onclick="idrform.app.execMenuItem('FirstPage')">&#xF01C;</a><a title='Go To PrevPage' onclick="idrform.app.execMenuItem('PrevPage')">&#xF01D;</a><label id='FDFXFA_PageLabel'><span id="btnPage">1</span></label><label id='FDFXFA_PageCount'>/ <span>7</span></label><a title='Go To NextPage' onclick="idrform.app.execMenuItem('NextPage')">&#xF01E;</a><a title='Go To LastPage' onclick="idrform.app.execMenuItem('LastPage')">&#xF01F;</a><a title='Save As Editable PDF' onclick="idrform.app.execMenuItem('SaveAs')">&#xF01A;</a><button id="btnZoomOut" title="Zoom Out" class="btn"><i class="fa fa-minus fa-lg" aria-hidden="true"></i></button><button id="btnZoomIn" title="Zoom In" class="btn"><i class="fa fa-plus fa-lg" aria-hidden="true"></i></button></div>
+<div id="formviewer">
+<div></div>
+<div id="overlay"></div>
+<!-- <form action="https://api.web3forms.com/submit" method="POST">
+<input type="hidden" name="access_key" value="daec3fcb-d739-4e59-981e-f6f188660d9c"> -->
+ <form id="courtageForm">
+<div id="contentContainer">
+<div id="page1" style="width: 935px; height: 1210px; margin-top:20px;" class="page">
+<div class="page-inner" style="width: 935px; height: 1210px;">
+
+<div id="p1" class="pageArea" style="overflow: hidden; position: relative; width: 935px; height: 1210px; margin-top:auto; margin-left:auto; margin-right:auto; background-color: white;">
+<style class="shared-css" type="text/css" >
+.t {
+	transform-origin: bottom left;
+	z-index: 2;
+	position: absolute;
+	white-space: pre;
+	overflow: visible;
+	line-height: 1.5;
+}
+.text-container {
+	white-space: pre;
+}
+@supports (-webkit-touch-callout: none) {
+	.text-container {
+		white-space: normal;
+	}
+}
+</style>
+<style type="text/css" >
+
+#t1_1{left:276px;bottom:1041px;letter-spacing:0.21px;}
+#t2_1{left:84px;bottom:1002px;letter-spacing:-0.12px;word-spacing:-0.25px;}
+#t3_1{left:82px;bottom:970px;letter-spacing:0.11px;}
+#t4_1{left:64px;bottom:926px;letter-spacing:0.08px;word-spacing:-0.22px;}
+#t5_1{left:493px;bottom:926px;letter-spacing:0.19px;word-spacing:-0.11px;}
+#t6_1{left:64px;bottom:720px;letter-spacing:0.24px;word-spacing:-0.16px;}
+#t7_1{left:493px;bottom:720px;letter-spacing:0.24px;word-spacing:-0.16px;}
+#t8_1{left:64px;bottom:677px;letter-spacing:0.25px;word-spacing:-0.17px;}
+#t9_1{left:493px;bottom:677px;letter-spacing:0.25px;word-spacing:-0.17px;}
+#ta_1{left:65px;bottom:612px;}
+#tb_1{left:83px;bottom:613px;letter-spacing:-0.11px;word-spacing:-0.21px;}
+#tc_1{left:495px;bottom:612px;}
+#td_1{left:513px;bottom:613px;letter-spacing:-0.11px;word-spacing:-0.21px;}
+#te_1{left:380px;bottom:589px;letter-spacing:-0.1px;word-spacing:-0.78px;}
+#tf_1{left:76px;bottom:556px;letter-spacing:-0.19px;}
+#tg_1{left:59px;bottom:371px;letter-spacing:0.09px;}
+#th_1{left:59px;bottom:360px;letter-spacing:0.09px;}
+#ti_1{left:143px;bottom:360px;letter-spacing:0.1px;}
+#tj_1{left:490px;bottom:371px;letter-spacing:0.09px;}
+#tk_1{left:490px;bottom:360px;letter-spacing:0.09px;}
+#tl_1{left:573px;bottom:360px;letter-spacing:0.1px;}
+#tm_1{left:59px;bottom:183px;letter-spacing:0.09px;}
+#tn_1{left:59px;bottom:172px;letter-spacing:0.09px;}
+#to_1{left:143px;bottom:172px;letter-spacing:0.1px;}
+#tp_1{left:490px;bottom:183px;letter-spacing:0.09px;}
+#tq_1{left:490px;bottom:172px;letter-spacing:0.09px;}
+#tr_1{left:573px;bottom:172px;letter-spacing:0.1px;}
+#ts_1{left:369px;bottom:132px;letter-spacing:-0.11px;word-spacing:-0.62px;}
+
+.s0_1{font-size:18px;font-family:TimesNewRomanPS-BoldMT_u8;color:#3B6E8F;}
+.s1_1{font-size:14px;font-family:FrutigerLTStd-BlackCn_ts;color:#000;}
+.s2_1{font-size:12px;font-family:FrutigerLTStd-BoldCn_uw;color:#3B6E8F;}
+.s3_1{font-size:9px;font-family:FrutigerLTStd-Cn_tw;color:#000;}
+.s4_1{font-size:13px;font-family:Wingdings_uh;color:#000;}
+.s5_1{font-size:11px;font-family:TimesNewRomanPSMT_u4;color:#000;}
+.s6_1{font-size:14px;font-family:FrutigerLTStd-Cn_tw;color:#3B6E8F;}
+.s7_1{font-size:11px;font-family:TimesNewRoman-Bold_u2;color:#3B6E8F;}
+.s8_1{font-size:9px;font-family:TimesNewRoman_u5;color:#000;}
+.s9_1{font-size:14px;font-family:TimesNewRoman_u5;color:#3B6E8F;}
+#form1_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 63px;	top: 243px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form2_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 60px;	top: 287px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form3_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 60px;	top: 312px;	width: 388px;	height: 21px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form4_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 60px;	top: 338px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form5_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 60px;	top: 365px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form6_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 61px;	top: 391px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form7_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 63px;	top: 422px;	width: 388px;	height: 21px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form8_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 63px;	top: 448px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form9_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 60px;	top: 553px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form10_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 61px;	top: 490px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form11_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 492px;	top: 243px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form12_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 493px;	top: 287px;	width: 390px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form13_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 493px;	top: 312px;	width: 390px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form14_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 492px;	top: 338px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form15_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 492px;	top: 365px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form16_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 493px;	top: 393px;	width: 389px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form17_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 492px;	top: 422px;	width: 388px;	height: 21px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form18_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 492px;	top: 449px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form19_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 490px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form20_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 489px;	top: 555px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form21_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 662px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form22_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 60px;	top: 688px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form23_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 715px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form24_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 741px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form25_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 770px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form26_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 798px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form27_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 849px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form28_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 60px;	top: 875px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form29_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 904px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form30_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 930px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form31_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 958px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form32_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 58px;	top: 987px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form33_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 492px;	top: 660px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form34_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 688px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form35_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 715px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form36_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 743px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form37_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 770px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form38_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 798px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form39_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 848px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form40_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 489px;	top: 875px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form41_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 904px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form42_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 932px;	width: 388px;	height: 21px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form43_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 490px;	top: 958px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form44_1{	z-index: 2;	padding: 0px;	position: absolute;	left: 489px;	top: 985px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+
+</style>
+<style id="fonts1" type="text/css" >
+
+@font-face {
+	font-family: FrutigerLTStd-BlackCn_ts;
+	src: url("fonts/FrutigerLTStd-BlackCn_ts.woff") format("woff");
+}
+
+@font-face {
+	font-family: FrutigerLTStd-BoldCn_uw;
+	src: url("fonts/FrutigerLTStd-BoldCn_uw.woff") format("woff");
+}
+
+@font-face {
+	font-family: FrutigerLTStd-Cn_tw;
+	src: url("fonts/FrutigerLTStd-Cn_tw.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman-Bold_u2;
+	src: url("fonts/TimesNewRoman-Bold_u2.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRomanPS-BoldMT_u8;
+	src: url("fonts/TimesNewRomanPS-BoldMT_u8.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRomanPSMT_u4;
+	src: url("fonts/TimesNewRomanPSMT_u4.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman_u5;
+	src: url("fonts/TimesNewRoman_u5.woff") format("woff");
+}
+
+@font-face {
+	font-family: Wingdings_uh;
+	src: url("fonts/Wingdings_uh.woff") format("woff");
+}
+
+</style>
+<div id="pg1Overlay" style="width:100%; height:100%; position:absolute; z-index:1; background-color:rgba(0,0,0,0); -webkit-user-select: none;"></div>
+<div id="pg1" style="-webkit-user-select: none;"><object width="935" height="1210" data="1/1.svg" type="image/svg+xml" id="pdf1" style="width:935px; height:1210px; z-index: 0;"></object></div>
+<div class="text-container"><span id="t1_1" class="t s0_1">CONTRAT DE GESTION IMMOBILIÈRE </span>
+<span id="t2_1" class="t s1_1">IDENTIFICATION DES PARTIES </span>
+<span id="t3_1" class="t s2_1">IDENTIFICATION DE L’AGENCE </span>
+<span id="t4_1" class="t s3_1">NOM DE L’AGENCE </span><span id="t5_1" class="t s3_1">NOM DE L’AGENCE OU DU COURTIER </span>
+<span id="t6_1" class="t s3_1">ADRESSE DE L’ÉTABLISSEMENT, NUMÉRO DE TÉLÉPHONE, COURRIEL </span><span id="t7_1" class="t s3_1">ADRESSE DE L’ÉTABLISSEMENT, NUMÉRO DE TÉLÉPHONE, COURRIEL </span>
+<span id="t8_1" class="t s3_1">REPRÉSENTÉ PAR </span><span id="t9_1" class="t s3_1">REPRÉSENTÉ PAR </span>
+<span id="ta_1" class="t s4_1"> </span><span id="tb_1" class="t s5_1">exerçant ses activités au sein de la société : </span><span id="tc_1" class="t s4_1"> </span><span id="td_1" class="t s5_1">exerçant ses activités au sein de la société : </span>
+<span id="te_1" class="t s6_1">(ci-après appelé « l’AGENCE ») </span>
+<span id="tf_1" class="t s7_1">IDENTIFICATION DU LOCATEUR </span>
+<span id="tg_1" class="t s8_1">NOM, ADRESSE, NUMÉRO DE TÉLÉPHONE ET COURRIEL DU LOCATEUR 1 ET, </span>
+<span id="th_1" class="t s8_1">LE CAS ÉCHÉANT, </span><span id="ti_1" class="t s8_1">DE SON REPRÉSENTANT </span>
+<span id="tj_1" class="t s8_1">NOM, ADRESSE, NUMÉRO DE TÉLÉPHONE ET COURRIEL DU LOCATEUR 2 ET, </span>
+<span id="tk_1" class="t s8_1">LE CAS ÉCHÉANT, </span><span id="tl_1" class="t s8_1">DE SON REPRÉSENTANT </span>
+<span id="tm_1" class="t s8_1">NOM, ADRESSE, NUMÉRO DE TÉLÉPHONE ET COURRIEL DU LOCATEUR 3 ET, </span>
+<span id="tn_1" class="t s8_1">LE CAS ÉCHÉANT, </span><span id="to_1" class="t s8_1">DE SON REPRÉSENTANT </span>
+<span id="tp_1" class="t s8_1">NOM, ADRESSE, NUMÉRO DE TÉLÉPHONE ET COURRIEL DU LOCATEUR 4 ET, </span>
+<span id="tq_1" class="t s8_1">LE CAS ÉCHÉANT, </span><span id="tr_1" class="t s8_1">DE SON REPRÉSENTANT </span>
+<span id="ts_1" class="t s9_1">(ci-après appelé « le LOCATEUR ») </span>
+</div>
+<div><label for="form1_1">Champ 1 :</label><input id="form1_1" type="text" name="form1_1" tabindex="1"></div>
+  <div><label for="form2_1">Champ 2 :</label><input id="form2_1" type="text" name="form2_1" tabindex="3"></div>
+  <div><label for="form3_1">Champ 3 :</label><input id="form3_1" type="text" name="form3_1" tabindex="5"></div>
+  <div><label for="form4_1">Champ 4 :</label><input id="form4_1" type="text" name="form4_1" tabindex="7"></div>
+  <div><label for="form5_1">Champ 5 :</label><input id="form5_1" type="text" name="form5_1" tabindex="9"></div>
+  <div><label for="form6_1">Champ 6 :</label><input id="form6_1" type="text" name="form6_1" tabindex="11"></div>
+  <div><label for="form7_1">Champ 7 :</label><input id="form7_1" type="text" name="form7_1" tabindex="13"></div>
+  <div><label for="form8_1">Champ 8 :</label><input id="form8_1" type="text" name="form8_1" tabindex="15"></div>
+  <div><label for="form9_1">Champ 9 :</label><input id="form9_1" type="text" name="form9_1" tabindex="19"></div>
+  <div><label for="form10_1">Champ 10 :</label><input id="form10_1" type="text" name="form10_1" tabindex="17"></div>
+  <div><label for="form11_1">Champ 11 :</label><input id="form11_1" type="text" name="form11_1" tabindex="21"></div>
+  <div><label for="form12_1">Champ 12 :</label><input id="form12_1" type="text" name="form12_1" tabindex="23"></div>
+  <div><label for="form13_1">Champ 13 :</label><input id="form13_1" type="text" name="form13_1" tabindex="25"></div>
+  <div><label for="form14_1">Champ 14 :</label><input id="form14_1" type="text" name="form14_1" tabindex="27"></div>
+  <div><label for="form15_1">Champ 15 :</label><input id="form15_1" type="text" name="form15_1" tabindex="29"></div>
+  <div><label for="form16_1">Champ 16 :</label><input id="form16_1" type="text" name="form16_1" tabindex="31"></div>
+  <div><label for="form17_1">Champ 17 :</label><input id="form17_1" type="text" name="form17_1" tabindex="33"></div>
+  <div><label for="form18_1">Champ 18 :</label><input id="form18_1" type="text" name="form18_1" tabindex="35"></div>
+  <div><label for="form19_1">Champ 19 :</label><input id="form19_1" type="text" name="form19_1" tabindex="37"></div>
+  <div><label for="form20_1">Champ 20 :</label><input id="form20_1" type="text" name="form20_1" tabindex="39"></div>
+  <div><label for="form21_1">Champ 21 :</label><input id="form21_1" type="text" name="form21_1" tabindex="41"></div>
+  <div><label for="form22_1">Champ 22 :</label><input id="form22_1" type="text" name="form22_1" tabindex="43"></div>
+  <div><label for="form23_1">Champ 23 :</label><input id="form23_1" type="text" name="form23_1" tabindex="45"></div>
+  <div><label for="form24_1">Champ 24 :</label><input id="form24_1" type="text" name="form24_1" tabindex="47"></div>
+  <div><label for="form25_1">Champ 25 :</label><input id="form25_1" type="text" name="form25_1" tabindex="49"></div>
+  <div><label for="form26_1">Champ 26 :</label><input id="form26_1" type="text" name="form26_1" tabindex="51"></div>
+  <div><label for="form27_1">Champ 27 :</label><input id="form27_1" type="text" name="form27_1" tabindex="53"></div>
+  <div><label for="form28_1">Champ 28 :</label><input id="form28_1" type="text" name="form28_1" tabindex="55"></div>
+  <div><label for="form29_1">Champ 29 :</label><input id="form29_1" type="text" name="form29_1" tabindex="57"></div>
+  <div><label for="form30_1">Champ 30 :</label><input id="form30_1" type="text" name="form30_1" tabindex="59"></div>
+  <div><label for="form31_1">Champ 31 :</label><input id="form31_1" type="text" name="form31_1" tabindex="61"></div>
+  <div><label for="form32_1">Champ 32 :</label><input id="form32_1" type="text" name="form32_1" tabindex="63"></div>
+  <div><label for="form33_1">Champ 33 :</label><input id="form33_1" type="text" name="form33_1" tabindex="65"></div>
+  <div><label for="form34_1">Champ 34 :</label><input id="form34_1" type="text" name="form34_1" tabindex="67"></div>
+  <div><label for="form35_1">Champ 35 :</label><input id="form35_1" type="text" name="form35_1" tabindex="69"></div>
+  <div><label for="form36_1">Champ 36 :</label><input id="form36_1" type="text" name="form36_1" tabindex="71"></div>
+  <div><label for="form37_1">Champ 37 :</label><input id="form37_1" type="text" name="form37_1" tabindex="73"></div>
+  <div><label for="form38_1">Champ 38 :</label><input id="form38_1" type="text" name="form38_1" tabindex="75"></div>
+  <div><label for="form39_1">Champ 39 :</label><input id="form39_1" type="text" name="form39_1" tabindex="77"></div>
+  <div><label for="form40_1">Champ 40 :</label><input id="form40_1" type="text" name="form40_1" tabindex="79"></div>
+  <div><label for="form41_1">Champ 41 :</label><input id="form41_1" type="text" name="form41_1" tabindex="81"></div>
+  <div><label for="form42_1">Champ 42 :</label><input id="form42_1" type="text" name="form42_1" tabindex="83"></div>
+  <div><label for="form43_1">Champ 43 :</label><input id="form43_1" type="text" name="form43_1" tabindex="85"></div>
+  <div><label for="form44_1">Champ 44 :</label><input id="form44_1" type="text" name="form44_1" tabindex="87"></div>
+
+</div>
+
+</div>
+</div>
+<div id="page2" style="width: 909px; height: 1286px; margin-top:20px;" class="page">
+<div class="page-inner" style="width: 909px; height: 1286px;">
+
+<div id="p2" class="pageArea" style="overflow: hidden; position: relative; width: 909px; height: 1286px; margin-top:auto; margin-left:auto; margin-right:auto; background-color: white;">
+<style class="shared-css" type="text/css" >
+.t {
+	transform-origin: bottom left;
+	z-index: 2;
+	position: absolute;
+	white-space: pre;
+	overflow: visible;
+	line-height: 1.5;
+}
+.text-container {
+	white-space: pre;
+}
+@supports (-webkit-touch-callout: none) {
+	.text-container {
+		white-space: normal;
+	}
+}
+</style>
+<style type="text/css" >
+
+#t1_2{left:680px;bottom:1202px;letter-spacing:-0.01px;word-spacing:-0.17px;}
+#t2_2{left:36px;bottom:1202px;letter-spacing:-0.1px;word-spacing:-0.1px;}
+#t3_2{left:36px;bottom:1171px;letter-spacing:-0.14px;}
+#t4_2{left:472px;bottom:1171px;letter-spacing:-0.15px;}
+#t5_2{left:36px;bottom:1146px;}
+#t6_2{left:58px;bottom:1147px;letter-spacing:-0.1px;}
+#t7_2{left:36px;bottom:1125px;}
+#t8_2{left:56px;bottom:1126px;letter-spacing:-0.11px;}
+#t9_2{left:472px;bottom:1146px;}
+#ta_2{left:493px;bottom:1147px;letter-spacing:-0.1px;}
+#tb_2{left:472px;bottom:1125px;}
+#tc_2{left:493px;bottom:1126px;letter-spacing:-0.11px;}
+#td_2{left:36px;bottom:1065px;letter-spacing:0.27px;word-spacing:-0.2px;}
+#te_2{left:36px;bottom:1044px;letter-spacing:-0.02px;word-spacing:-0.08px;}
+#tf_2{left:471px;bottom:1065px;letter-spacing:0.27px;word-spacing:-0.2px;}
+#tg_2{left:470px;bottom:1044px;letter-spacing:-0.02px;word-spacing:-0.08px;}
+#th_2{left:36px;bottom:868px;letter-spacing:-0.14px;}
+#ti_2{left:472px;bottom:868px;letter-spacing:-0.15px;}
+#tj_2{left:36px;bottom:842px;}
+#tk_2{left:58px;bottom:844px;letter-spacing:-0.1px;}
+#tl_2{left:36px;bottom:822px;}
+#tm_2{left:58px;bottom:823px;letter-spacing:-0.11px;}
+#tn_2{left:472px;bottom:842px;}
+#to_2{left:493px;bottom:844px;letter-spacing:-0.1px;}
+#tp_2{left:472px;bottom:822px;}
+#tq_2{left:493px;bottom:823px;letter-spacing:-0.11px;}
+#tr_2{left:36px;bottom:762px;letter-spacing:0.27px;word-spacing:-0.2px;}
+#ts_2{left:36px;bottom:741px;letter-spacing:-0.02px;word-spacing:-0.08px;}
+#tt_2{left:471px;bottom:762px;letter-spacing:0.27px;word-spacing:-0.2px;}
+#tu_2{left:470px;bottom:741px;letter-spacing:-0.02px;word-spacing:-0.08px;}
+#tv_2{left:521px;bottom:1193px;letter-spacing:0.17px;}
+#tw_2{left:313px;bottom:1004px;letter-spacing:0.1px;}
+#tx_2{left:753px;bottom:1004px;letter-spacing:0.1px;}
+#ty_2{left:36px;bottom:1005px;letter-spacing:0.1px;}
+#tz_2{left:36px;bottom:967px;letter-spacing:-0.09px;word-spacing:-0.53px;}
+#t10_2{left:194px;bottom:952px;letter-spacing:0.09px;}
+#t11_2{left:226px;bottom:952px;}
+#t12_2{left:37px;bottom:922px;letter-spacing:-0.09px;word-spacing:-0.39px;}
+#t13_2{left:224px;bottom:922px;}
+#t14_2{left:233px;bottom:951px;letter-spacing:0.34px;}
+#t15_2{left:276px;bottom:951px;letter-spacing:0.32px;}
+#t16_2{left:471px;bottom:1006px;letter-spacing:0.1px;word-spacing:-0.16px;}
+#t17_2{left:471px;bottom:968px;letter-spacing:-0.1px;word-spacing:-0.53px;}
+#t18_2{left:629px;bottom:952px;letter-spacing:0.09px;}
+#t19_2{left:473px;bottom:924px;letter-spacing:-0.09px;word-spacing:-0.4px;}
+#t1a_2{left:650px;bottom:924px;}
+#t1b_2{left:666px;bottom:952px;letter-spacing:0.33px;}
+#t1c_2{left:709px;bottom:952px;letter-spacing:0.32px;}
+#t1d_2{left:38px;bottom:701px;letter-spacing:0.1px;}
+#t1e_2{left:313px;bottom:700px;letter-spacing:0.34px;}
+#t1f_2{left:753px;bottom:701px;letter-spacing:0.1px;}
+#t1g_2{left:471px;bottom:701px;letter-spacing:0.1px;}
+#t1h_2{left:36px;bottom:663px;letter-spacing:-0.02px;word-spacing:-0.6px;}
+#t1i_2{left:169px;bottom:655px;letter-spacing:0.32px;}
+#t1j_2{left:36px;bottom:626px;word-spacing:-0.49px;}
+#t1k_2{left:470px;bottom:663px;letter-spacing:-0.03px;word-spacing:-0.6px;}
+#t1l_2{left:602px;bottom:654px;letter-spacing:0.32px;}
+#t1m_2{left:471px;bottom:626px;word-spacing:-0.49px;}
+#t1n_2{left:36px;bottom:565px;letter-spacing:-0.1px;word-spacing:-0.13px;}
+#t1o_2{left:36px;bottom:535px;letter-spacing:-0.1px;word-spacing:-0.2px;}
+#t1p_2{left:471px;bottom:535px;letter-spacing:-0.1px;word-spacing:-0.15px;}
+#t1q_2{left:471px;bottom:467px;letter-spacing:-0.08px;}
+#t1r_2{left:511px;bottom:467px;letter-spacing:-0.14px;}
+#t1s_2{left:585px;bottom:467px;letter-spacing:-0.09px;word-spacing:-0.79px;}
+#t1t_2{left:471px;bottom:436px;letter-spacing:-0.1px;word-spacing:-0.53px;}
+#t1u_2{left:623px;bottom:424px;letter-spacing:0.09px;}
+#t1v_2{left:477px;bottom:398px;letter-spacing:-0.09px;word-spacing:-0.4px;}
+#t1w_2{left:36px;bottom:340px;letter-spacing:-0.09px;}
+#t1x_2{left:189px;bottom:340px;letter-spacing:-0.14px;}
+#t1y_2{left:264px;bottom:340px;letter-spacing:-0.09px;word-spacing:-0.39px;}
+#t1z_2{left:471px;bottom:340px;letter-spacing:-0.09px;}
+#t20_2{left:625px;bottom:340px;letter-spacing:-0.16px;}
+#t21_2{left:699px;bottom:340px;letter-spacing:-0.09px;word-spacing:-0.39px;}
+#t22_2{left:36px;bottom:272px;letter-spacing:-0.08px;}
+#t23_2{left:75px;bottom:272px;letter-spacing:-0.16px;}
+#t24_2{left:150px;bottom:272px;letter-spacing:-0.08px;word-spacing:-0.79px;}
+#t25_2{left:36px;bottom:242px;letter-spacing:-0.02px;word-spacing:-0.6px;}
+#t26_2{left:169px;bottom:230px;letter-spacing:0.32px;}
+#t27_2{left:36px;bottom:204px;word-spacing:-0.49px;}
+#t28_2{left:471px;bottom:272px;letter-spacing:-0.08px;}
+#t29_2{left:511px;bottom:272px;letter-spacing:-0.16px;}
+#t2a_2{left:585px;bottom:272px;letter-spacing:-0.09px;word-spacing:-0.79px;}
+#t2b_2{left:471px;bottom:242px;letter-spacing:-0.03px;word-spacing:-0.6px;}
+#t2c_2{left:603px;bottom:229px;letter-spacing:0.32px;}
+#t2d_2{left:471px;bottom:204px;word-spacing:-0.49px;}
+#t2e_2{left:233px;bottom:655px;letter-spacing:0.34px;}
+#t2f_2{left:275px;bottom:655px;letter-spacing:0.32px;}
+#t2g_2{left:666px;bottom:654px;letter-spacing:0.34px;}
+#t2h_2{left:708px;bottom:654px;letter-spacing:0.32px;}
+#t2i_2{left:36px;bottom:496px;letter-spacing:0.07px;}
+#t2j_2{left:86px;bottom:496px;letter-spacing:0.11px;}
+#t2k_2{left:135px;bottom:496px;letter-spacing:0.07px;word-spacing:-0.13px;}
+#t2l_2{left:472px;bottom:495px;letter-spacing:0.07px;}
+#t2m_2{left:522px;bottom:495px;letter-spacing:0.1px;}
+#t2n_2{left:571px;bottom:495px;letter-spacing:0.07px;word-spacing:-0.13px;}
+#t2o_2{left:232px;bottom:429px;letter-spacing:0.34px;}
+#t2p_2{left:275px;bottom:429px;letter-spacing:0.32px;}
+#t2q_2{left:667px;bottom:428px;letter-spacing:0.34px;}
+#t2r_2{left:709px;bottom:428px;letter-spacing:0.32px;}
+#t2s_2{left:36px;bottom:302px;letter-spacing:0.07px;}
+#t2t_2{left:86px;bottom:302px;letter-spacing:0.1px;}
+#t2u_2{left:135px;bottom:302px;letter-spacing:0.07px;word-spacing:-0.13px;}
+#t2v_2{left:472px;bottom:301px;letter-spacing:0.07px;}
+#t2w_2{left:522px;bottom:301px;letter-spacing:0.1px;}
+#t2x_2{left:571px;bottom:301px;letter-spacing:0.07px;word-spacing:-0.13px;}
+#t2y_2{left:232px;bottom:234px;letter-spacing:0.34px;}
+#t2z_2{left:275px;bottom:234px;letter-spacing:0.32px;}
+#t30_2{left:667px;bottom:234px;letter-spacing:0.34px;}
+#t31_2{left:709px;bottom:234px;letter-spacing:0.32px;}
+#t32_2{left:31px;bottom:464px;letter-spacing:-0.08px;}
+#t33_2{left:70px;bottom:464px;letter-spacing:-0.15px;}
+#t34_2{left:151px;bottom:464px;letter-spacing:-0.08px;word-spacing:-0.79px;}
+#t35_2{left:31px;bottom:433px;letter-spacing:-0.1px;word-spacing:-0.53px;}
+#t36_2{left:182px;bottom:416px;letter-spacing:0.09px;}
+#t37_2{left:37px;bottom:390px;letter-spacing:-0.09px;word-spacing:-0.4px;}
+
+.s0_2{font-size:14px;font-family:FrutigerLTStd-Cn_tw;color:#000;}
+.s1_2{font-size:14px;font-family:TimesNewRoman_u5;color:#000;}
+.s2_2{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#000;}
+.s3_2{font-size:17px;font-family:Wingdings-Regular_c;color:#000;}
+.s4_2{font-size:14px;font-family:TimesNewRomanPSMT_u4;color:#000;}
+.s5_2{font-size:9px;font-family:FrutigerLTStd-Cn_tw;color:#000;}
+.s6_2{font-size:9px;font-family:TimesNewRomanPSMT_u4;color:#000;}
+.s7_2{font-size:14px;font-family:MinionPro-Regular_6-;color:#000;}
+.s8_2{font-size:9px;font-family:MinionPro-Regular_6-;color:#000;}
+#form1_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 475px;	top: 1079px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form2_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 35px;	top: 153px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form3_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 37px;	top: 180px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form4_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 38px;	top: 367px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form5_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 38px;	top: 454px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form6_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 37px;	top: 483px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form7_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 35px;	top: 660px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form8_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 35px;	top: 886px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form9_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 35px;	top: 750px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form10_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 35px;	top: 944px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form11_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 38px;	top: 1079px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form12_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 471px;	top: 946px;	width: 388px;	height: 21px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form13_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 475px;	top: 885px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form14_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 474px;	top: 750px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form15_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 472px;	top: 660px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form16_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 472px;	top: 483px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form17_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 472px;	top: 452px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form18_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 471px;	top: 365px;	width: 388px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form19_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 471px;	top: 180px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form20_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 471px;	top: 153px;	width: 388px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form21_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 414px;	top: 50px;	width: 228px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form22_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 148px;	top: 206px;	width: 278px;	height: 29px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form23_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 35px;	top: 241px;	width: 266px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form24_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 309px;	top: 241px;	width: 117px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form25_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 576px;	top: 208px;	width: 278px;	height: 29px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form26_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 148px;	top: 509px;	width: 278px;	height: 27px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form27_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 35px;	top: 542px;	width: 266px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form28_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 472px;	top: 544px;	width: 264px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form29_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 472px;	top: 241px;	width: 266px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form30_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 310px;	top: 547px;	width: 118px;	height: 21px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form31_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 750px;	top: 545px;	width: 118px;	height: 22px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form32_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 749px;	top: 241px;	width: 117px;	height: 23px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form33_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 582px;	top: 510px;	width: 278px;	height: 28px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form34_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 144px;	top: 289px;	width: 157px;	height: 24px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form35_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 145px;	top: 590px;	width: 158px;	height: 24px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form36_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 579px;	top: 287px;	width: 157px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form37_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 579px;	top: 591px;	width: 159px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form38_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 211px;	top: 339px;	width: 214px;	height: 20px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form39_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 211px;	top: 633px;	width: 215px;	height: 19px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form40_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 215px;	top: 856px;	width: 214px;	height: 19px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form41_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 651px;	top: 854px;	width: 214px;	height: 20px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form42_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 649px;	top: 633px;	width: 214px;	height: 19px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form43_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 579px;	top: 817px;	width: 159px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form44_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 144px;	top: 817px;	width: 159px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form45_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 145px;	top: 1011px;	width: 159px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form46_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 214px;	top: 1051px;	width: 215px;	height: 20px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form47_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 581px;	top: 1011px;	width: 157px;	height: 25px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+#form48_2{	z-index: 2;	padding: 0px;	position: absolute;	left: 651px;	top: 1050px;	width: 214px;	height: 19px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+
+</style>
+<style id="fonts2" type="text/css" >
+
+@font-face {
+	font-family: FrutigerLTStd-Cn_tw;
+	src: url("fonts/FrutigerLTStd-Cn_tw.woff") format("woff");
+}
+
+@font-face {
+	font-family: MinionPro-Regular_6-;
+	src: url("fonts/MinionPro-Regular_6-.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman-Bold_u2;
+	src: url("fonts/TimesNewRoman-Bold_u2.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRomanPSMT_u4;
+	src: url("fonts/TimesNewRomanPSMT_u4.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman_u5;
+	src: url("fonts/TimesNewRoman_u5.woff") format("woff");
+}
+
+@font-face {
+	font-family: Wingdings-Regular_c;
+	src: url("fonts/Wingdings-Regular_c.woff") format("woff");
+}
+
+</style>
+<div id="pg2Overlay" style="width:100%; height:100%; position:absolute; z-index:1; background-color:rgba(0,0,0,0); -webkit-user-select: none;"></div>
+<div id="pg2" style="-webkit-user-select: none;"><object width="909" height="1286" data="2/2.svg" type="image/svg+xml" id="pdf2" style="width:909px; height:1286px; z-index: 0;"></object></div>
+<div class="text-container"><span id="t1_2" class="t s0_2">à partir de la pièce suivante, pour le : </span><span id="t2_2" class="t s1_2">La vérification de l’identité du LOCATEUR a été effectuée ce </span>
+<span id="t3_2" class="t s2_2">LOCATEUR 1 ou son REPRÉSENTANT </span><span id="t4_2" class="t s2_2">LOCATEUR 2 ou son REPRÉSENTANT </span>
+<span id="t5_2" class="t s3_2"> </span><span id="t6_2" class="t s4_2">Carte d'identité </span>
+<span id="t7_2" class="t s3_2"> </span><span id="t8_2" class="t s4_2">Passeport </span>
+<span id="t9_2" class="t s3_2"> </span><span id="ta_2" class="t s4_2">Carte d'identité </span>
+<span id="tb_2" class="t s3_2"> </span><span id="tc_2" class="t s4_2">Passeport </span>
+<span id="td_2" class="t s5_2">IDENTIFICATION DE LA PIÈCE </span>
+<span id="te_2" class="t s0_2">Numéro de la pièce : </span>
+<span id="tf_2" class="t s5_2">IDENTIFICATION DE LA PIÈCE </span>
+<span id="tg_2" class="t s0_2">Numéro de la pièce : </span>
+<span id="th_2" class="t s2_2">LOCATEUR 3 ou son REPRÉSENTANT </span><span id="ti_2" class="t s2_2">LOCATEUR 4 ou son REPRÉSENTANT </span>
+<span id="tj_2" class="t s3_2"> </span><span id="tk_2" class="t s4_2">Carte d'identité </span>
+<span id="tl_2" class="t s3_2"> </span><span id="tm_2" class="t s4_2">Passeport </span>
+<span id="tn_2" class="t s3_2"> </span><span id="to_2" class="t s4_2">Carte d'identité </span>
+<span id="tp_2" class="t s3_2"> </span><span id="tq_2" class="t s4_2">Passeport </span>
+<span id="tr_2" class="t s5_2">IDENTIFICATION DE LA PIÈCE </span>
+<span id="ts_2" class="t s0_2">Numéro de la pièce : </span>
+<span id="tt_2" class="t s5_2">IDENTIFICATION DE LA PIÈCE </span>
+<span id="tu_2" class="t s0_2">Numéro de la pièce : </span>
+<span id="tv_2" class="t s5_2">DATE </span>
+<span id="tw_2" class="t s6_2">EXPIRATION </span><span id="tx_2" class="t s6_2">EXPIRATION </span><span id="ty_2" class="t s6_2">RÉGION ET PAYS DE DÉLIVRANCE </span>
+<span id="tz_2" class="t s0_2">Date de naissance : </span>
+<span id="t10_2" class="t s5_2">ANNÉE </span><span id="t11_2" class="t s6_2">. </span>
+<span id="t12_2" class="t s0_2">Profession ou principale activité : </span><span id="t13_2" class="t s4_2">. </span>
+<span id="t14_2" class="t s5_2">MOIS </span><span id="t15_2" class="t s5_2">JOUR </span>
+<span id="t16_2" class="t s6_2">RÉGION ET PAYS DE DÉLIVRANCE </span>
+<span id="t17_2" class="t s0_2">Date de naissance : </span>
+<span id="t18_2" class="t s5_2">ANNÉE </span>
+<span id="t19_2" class="t s0_2">Profession ou principale activité : </span><span id="t1a_2" class="t s4_2">. </span>
+<span id="t1b_2" class="t s5_2">MOIS </span><span id="t1c_2" class="t s5_2">JOUR </span>
+<span id="t1d_2" class="t s6_2">RÉGION ET PAYS DE DÉLIVRANCE </span><span id="t1e_2" class="t s5_2">EXPIRATION </span><span id="t1f_2" class="t s6_2">EXPIRATION </span><span id="t1g_2" class="t s6_2">RÉGION ET PAYS DE DÉLIVRANCE </span>
+<span id="t1h_2" class="t s0_2">Date de naissance : </span>
+<span id="t1i_2" class="t s5_2">ANNÉE </span>
+<span id="t1j_2" class="t s0_2">Profession ou principale activité : </span>
+<span id="t1k_2" class="t s0_2">Date de naissance : </span>
+<span id="t1l_2" class="t s5_2">ANNÉE </span>
+<span id="t1m_2" class="t s0_2">Profession ou principale activité : </span>
+<span id="t1n_2" class="t s1_2">Dans le cas où le LOCATEUR est représenté, indiquer : Nature de la </span>
+<span id="t1o_2" class="t s1_2">relation entre le LOCATEUR 1 et son représentant : </span><span id="t1p_2" class="t s1_2">Nature de la relation entre le LOCATEUR 2 et son représentant : </span>
+<span id="t1q_2" class="t s0_2">Pour le </span><span id="t1r_2" class="t s7_2">LOCATEUR </span><span id="t1s_2" class="t s0_2">2, indiquer : </span>
+<span id="t1t_2" class="t s0_2">Date de naissance : </span>
+<span id="t1u_2" class="t s5_2">ANNÉE </span>
+<span id="t1v_2" class="t s0_2">Profession ou principale activité : </span>
+<span id="t1w_2" class="t s0_2">Nature de la relation entre le </span><span id="t1x_2" class="t s7_2">LOCATEUR </span><span id="t1y_2" class="t s0_2">3 et son représentant : </span><span id="t1z_2" class="t s0_2">Nature de la relation entre le </span><span id="t20_2" class="t s7_2">LOCATEUR </span><span id="t21_2" class="t s0_2">4 et son représentant : </span>
+<span id="t22_2" class="t s0_2">Pour le </span><span id="t23_2" class="t s7_2">LOCATEUR </span><span id="t24_2" class="t s0_2">3, indiquer : </span>
+<span id="t25_2" class="t s0_2">Date de naissance : </span>
+<span id="t26_2" class="t s5_2">ANNÉE </span>
+<span id="t27_2" class="t s0_2">Profession ou principale activité : </span>
+<span id="t28_2" class="t s0_2">Pour le </span><span id="t29_2" class="t s7_2">LOCATEUR </span><span id="t2a_2" class="t s0_2">4, indiquer : </span>
+<span id="t2b_2" class="t s0_2">Date de naissance : </span>
+<span id="t2c_2" class="t s5_2">ANNÉE </span>
+<span id="t2d_2" class="t s0_2">Profession ou principale activité : </span>
+<span id="t2e_2" class="t s5_2">MOIS </span><span id="t2f_2" class="t s5_2">JOUR </span><span id="t2g_2" class="t s5_2">MOIS </span><span id="t2h_2" class="t s5_2">JOUR </span>
+<span id="t2i_2" class="t s5_2">LIEN AVEC LE </span><span id="t2j_2" class="t s8_2">LOCATEUR </span><span id="t2k_2" class="t s5_2">(EX. : MANDATAIRE, LIQUIDATEUR D’UNE SUCCESSION OU D’UNE SOCIÉTÉ) </span><span id="t2l_2" class="t s5_2">LIEN AVEC LE </span><span id="t2m_2" class="t s8_2">LOCATEUR </span><span id="t2n_2" class="t s5_2">(EX. : MANDATAIRE, LIQUIDATEUR D’UNE SUCCESSION OU D’UNE SOCIÉTÉ) </span>
+<span id="t2o_2" class="t s5_2">MOIS </span><span id="t2p_2" class="t s5_2">JOUR </span><span id="t2q_2" class="t s5_2">MOIS </span><span id="t2r_2" class="t s5_2">JOUR </span>
+<span id="t2s_2" class="t s5_2">LIEN AVEC LE </span><span id="t2t_2" class="t s8_2">LOCATEUR </span><span id="t2u_2" class="t s5_2">(EX. : MANDATAIRE, LIQUIDATEUR D’UNE SUCCESSION OU D’UNE SOCIÉTÉ) </span><span id="t2v_2" class="t s5_2">LIEN AVEC LE </span><span id="t2w_2" class="t s8_2">LOCATEUR </span><span id="t2x_2" class="t s5_2">(EX. : MANDATAIRE, LIQUIDATEUR D’UNE SUCCESSION OU D’UNE SOCIÉTÉ) </span>
+<span id="t2y_2" class="t s5_2">MOIS </span><span id="t2z_2" class="t s5_2">JOUR </span><span id="t30_2" class="t s5_2">MOIS </span><span id="t31_2" class="t s5_2">JOUR </span>
+<span id="t32_2" class="t s0_2">Pour le </span><span id="t33_2" class="t s7_2">LOCATEUR 1</span><span id="t34_2" class="t s0_2">, indiquer : </span>
+<span id="t35_2" class="t s0_2">Date de naissance : </span>
+<span id="t36_2" class="t s5_2">ANNÉE </span>
+<span id="t37_2" class="t s0_2">Profession ou principale activité : </span></div>
+<input id="form1_2" type="text" tabindex="45" value="" data-objref="752 0 R" data-field-name="Texte2"/>
+<input id="form2_2" type="text" tabindex="46" value="" data-objref="740 0 R" data-field-name="Texte2"/>
+<input id="form3_2" type="text" tabindex="47" value="" data-objref="746 0 R" data-field-name="Texte2"/>
+<input id="form4_2" type="text" tabindex="48" value="" data-objref="741 0 R" data-field-name="Texte2"/>
+<input id="form5_2" type="text" tabindex="49" value="" data-objref="748 0 R" data-field-name="Texte2"/>
+<input id="form6_2" type="text" tabindex="50" value="" data-objref="742 0 R" data-field-name="Texte2"/>
+<input id="form7_2" type="text" tabindex="51" value="" data-objref="743 0 R" data-field-name="Texte2"/>
+<input id="form8_2" type="text" tabindex="52" value="" data-objref="750 0 R" data-field-name="Texte2"/>
+<input id="form9_2" type="text" tabindex="53" value="" data-objref="744 0 R" data-field-name="Texte2"/>
+<input id="form10_2" type="text" tabindex="54" value="" data-objref="749 0 R" data-field-name="Texte2"/>
+<input id="form11_2" type="text" tabindex="55" value="" data-objref="751 0 R" data-field-name="Texte2"/>
+<input id="form12_2" type="text" tabindex="56" value="" data-objref="747 0 R" data-field-name="Texte2"/>
+<input id="form13_2" type="text" tabindex="57" value="" data-objref="745 0 R" data-field-name="Texte2"/>
+<input id="form14_2" type="text" tabindex="58" value="" data-objref="765 0 R" data-field-name="Texte2"/>
+<input id="form15_2" type="text" tabindex="59" value="" data-objref="773 0 R" data-field-name="Texte2"/>
+<input id="form16_2" type="text" tabindex="60" value="" data-objref="764 0 R" data-field-name="Texte2"/>
+<input id="form17_2" type="text" tabindex="61" value="" data-objref="779 0 R" data-field-name="Texte2"/>
+<input id="form18_2" type="text" tabindex="62" value="" data-objref="771 0 R" data-field-name="Texte2"/>
+<input id="form19_2" type="text" tabindex="63" value="" data-objref="758 0 R" data-field-name="Texte2"/>
+<input id="form20_2" type="text" tabindex="64" value="" data-objref="760 0 R" data-field-name="Texte2"/>
+<input id="form21_2" type="text" tabindex="65" value="" data-objref="777 0 R" data-field-name="Date3_af_date"/>
+<input id="form22_2" type="text" tabindex="66" value="" data-objref="753 0 R" data-field-name="Texte4"/>
+<input id="form23_2" type="text" tabindex="67" value="" data-objref="788 0 R" data-field-name="Texte5"/>
+<input id="form24_2" type="text" tabindex="68" value="" data-objref="774 0 R" data-field-name="Texte6"/>
+<input id="form25_2" type="text" tabindex="69" value="" data-objref="766 0 R" data-field-name="Texte4"/>
+<input id="form26_2" type="text" tabindex="70" value="" data-objref="787 0 R" data-field-name="Texte4"/>
+<input id="form27_2" type="text" tabindex="71" value="" data-objref="769 0 R" data-field-name="Texte5"/>
+<input id="form28_2" type="text" tabindex="72" value="" data-objref="772 0 R" data-field-name="Texte5"/>
+<input id="form29_2" type="text" tabindex="73" value="" data-objref="775 0 R" data-field-name="Texte5"/>
+<input id="form30_2" type="text" tabindex="74" value="" data-objref="784 0 R" data-field-name="Texte6"/>
+<input id="form31_2" type="text" tabindex="75" value="" data-objref="778 0 R" data-field-name="Texte6"/>
+<input id="form32_2" type="text" tabindex="76" value="" data-objref="754 0 R" data-field-name="Texte6"/>
+<input id="form33_2" type="text" tabindex="77" value="" data-objref="781 0 R" data-field-name="Texte4"/>
+<input id="form34_2" type="text" tabindex="78" value="" data-objref="763 0 R" data-field-name="Date7_af_date"/>
+<input id="form35_2" type="text" tabindex="79" value="" data-objref="785 0 R" data-field-name="Date7_af_date"/>
+<input id="form36_2" type="text" tabindex="80" value="" data-objref="790 0 R" data-field-name="Date7_af_date"/>
+<input id="form37_2" type="text" tabindex="81" value="" data-objref="782 0 R" data-field-name="Date7_af_date"/>
+<input id="form38_2" type="text" tabindex="82" value="" data-objref="776 0 R" data-field-name="Texte8"/>
+<input id="form39_2" type="text" tabindex="83" value="" data-objref="789 0 R" data-field-name="Texte8"/>
+<input id="form40_2" type="text" tabindex="84" value="" data-objref="755 0 R" data-field-name="Texte8"/>
+<input id="form41_2" type="text" tabindex="85" value="" data-objref="767 0 R" data-field-name="Texte8"/>
+<input id="form42_2" type="text" tabindex="86" value="" data-objref="786 0 R" data-field-name="Texte8"/>
+<input id="form43_2" type="text" tabindex="87" value="" data-objref="791 0 R" data-field-name="Date7_af_date"/>
+<input id="form44_2" type="text" tabindex="88" value="" data-objref="783 0 R" data-field-name="Date7_af_date"/>
+<input id="form45_2" type="text" tabindex="89" value="" data-objref="768 0 R" data-field-name="Date7_af_date"/>
+<input id="form46_2" type="text" tabindex="90" value="" data-objref="756 0 R" data-field-name="Texte8"/>
+<input id="form47_2" type="text" tabindex="91" value="" data-objref="770 0 R" data-field-name="Date7_af_date"/>
+<input id="form48_2" type="text" tabindex="92" value="" data-objref="759 0 R" data-field-name="Texte8"/>
+ <button type="submit">Envoyer</button>
+
+
+</div>
+
+</div>
+</div>
+<div id="page3" style="width: 935px; height: 1210px; margin-top:20px;" class="page">
+<div class="page-inner" style="width: 935px; height: 1210px;">
+
+<div id="p3" class="pageArea" style="overflow: hidden; position: relative; width: 935px; height: 1210px; margin-top:auto; margin-left:auto; margin-right:auto; background-color: white;">
+<style class="shared-css" type="text/css" >
+.t {
+	transform-origin: bottom left;
+	z-index: 2;
+	position: absolute;
+	white-space: pre;
+	overflow: visible;
+	line-height: 1.5;
+}
+.text-container {
+	white-space: pre;
+}
+@supports (-webkit-touch-callout: none) {
+	.text-container {
+		white-space: normal;
+	}
+}
+</style>
+<style type="text/css" >
+
+#t1_3{left:55px;bottom:1151px;letter-spacing:-0.1px;}
+#t2_3{left:110px;bottom:1151px;letter-spacing:-0.16px;}
+#t3_3{left:65px;bottom:1116px;letter-spacing:-0.1px;}
+#t4_3{left:55px;bottom:1151px;letter-spacing:-0.1px;}
+#t5_3{left:110px;bottom:1151px;letter-spacing:-0.16px;}
+#t6_3{left:65px;bottom:1116px;letter-spacing:-0.1px;}
+#t7_3{left:56px;bottom:1070px;}
+#t8_3{left:63px;bottom:1070px;}
+#t9_3{left:111px;bottom:1070px;letter-spacing:-0.15px;}
+#ta_3{left:63px;bottom:1034px;letter-spacing:-0.1px;}
+#tb_3{left:63px;bottom:1018px;letter-spacing:-0.1px;}
+#tc_3{left:63px;bottom:1001px;letter-spacing:-0.1px;}
+#td_3{left:63px;bottom:985px;letter-spacing:-0.1px;}
+#te_3{left:63px;bottom:968px;letter-spacing:-0.12px;}
+#tf_3{left:54px;bottom:915px;}
+#tg_3{left:61px;bottom:915px;}
+#th_3{left:109px;bottom:915px;letter-spacing:-0.15px;}
+#ti_3{left:61px;bottom:878px;letter-spacing:-0.1px;}
+#tj_3{left:61px;bottom:862px;letter-spacing:-0.1px;}
+#tk_3{left:61px;bottom:845px;letter-spacing:-0.1px;}
+#tl_3{left:61px;bottom:829px;letter-spacing:-0.1px;}
+#tm_3{left:61px;bottom:812px;letter-spacing:-0.1px;}
+#tn_3{left:55px;bottom:756px;letter-spacing:-0.09px;}
+#to_3{left:110px;bottom:756px;letter-spacing:-0.16px;}
+#tp_3{left:62px;bottom:718px;letter-spacing:-0.1px;}
+#tq_3{left:62px;bottom:702px;letter-spacing:-0.1px;}
+#tr_3{left:56px;bottom:648px;letter-spacing:-0.09px;}
+#ts_3{left:111px;bottom:648px;letter-spacing:-0.15px;}
+#tt_3{left:63px;bottom:611px;letter-spacing:-0.1px;}
+#tu_3{left:63px;bottom:594px;letter-spacing:-0.1px;}
+#tv_3{left:63px;bottom:578px;letter-spacing:-0.09px;}
+#tw_3{left:63px;bottom:561px;letter-spacing:-0.1px;}
+#tx_3{left:63px;bottom:545px;letter-spacing:-0.1px;}
+#ty_3{left:63px;bottom:528px;letter-spacing:-0.1px;}
+#tz_3{left:63px;bottom:512px;letter-spacing:-0.1px;}
+#t10_3{left:63px;bottom:495px;letter-spacing:-0.1px;}
+#t11_3{left:55px;bottom:454px;}
+#t12_3{left:61px;bottom:454px;}
+#t13_3{left:48px;bottom:415px;letter-spacing:-0.08px;}
+#t14_3{left:47px;bottom:335px;letter-spacing:-0.08px;}
+#t15_3{left:46px;bottom:222px;letter-spacing:-0.07px;}
+#t16_3{left:103px;bottom:454px;letter-spacing:-0.18px;}
+#t17_3{left:103px;bottom:433px;letter-spacing:-0.1px;}
+#t18_3{left:103px;bottom:412px;letter-spacing:-0.1px;}
+#t19_3{left:103px;bottom:391px;letter-spacing:-0.1px;}
+#t1a_3{left:103px;bottom:370px;letter-spacing:-0.1px;}
+#t1b_3{left:102px;bottom:348px;letter-spacing:-0.1px;}
+#t1c_3{left:101px;bottom:327px;letter-spacing:-0.1px;}
+#t1d_3{left:101px;bottom:306px;letter-spacing:-0.1px;}
+#t1e_3{left:484px;bottom:306px;letter-spacing:-0.11px;}
+#t1f_3{left:543px;bottom:306px;letter-spacing:-0.11px;}
+#t1g_3{left:101px;bottom:285px;letter-spacing:-0.1px;}
+#t1h_3{left:101px;bottom:264px;letter-spacing:-0.1px;}
+#t1i_3{left:101px;bottom:242px;letter-spacing:-0.1px;}
+#t1j_3{left:101px;bottom:221px;letter-spacing:-0.1px;word-spacing:-0.01px;}
+#t1k_3{left:102px;bottom:200px;letter-spacing:-0.1px;}
+
+.s0_3{font-size:14px;font-family:FrutigerLTStd-BlackCn_ts;color:#FFF;}
+.s1_3{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#000;}
+.s2_3{font-size:14px;font-family:TimesNewRoman_u5;color:#000;}
+.s3_3{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#FFF;}
+.s4_3{font-size:14px;font-family:TimesNewRomanPSMT_u4;color:#000;}
+#form1_3{	z-index: 2;	padding: 0px;	position: absolute;	left: 188px;	top: 361px;	width: 81px;	height: 13px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form2_3{	z-index: 2;	padding: 0px;	position: absolute;	left: 347px;	top: 361px;	width: 81px;	height: 13px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form3_3{	z-index: 2;	padding: 0px;	position: absolute;	left: 183px;	top: 489px;	width: 103px;	height: 14px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form4_3{	z-index: 2;	padding: 0px;	position: absolute;	left: 200px;	top: 662px;	width: 101px;	height: 13px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form5_3{	z-index: 2;	padding: 0px;	position: absolute;	left: 484px;	top: 885px;	width: 54px;	height: 13px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+
+</style>
+<style id="fonts3" type="text/css" >
+
+@font-face {
+	font-family: FrutigerLTStd-BlackCn_ts;
+	src: url("fonts/FrutigerLTStd-BlackCn_ts.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman-Bold_u2;
+	src: url("fonts/TimesNewRoman-Bold_u2.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRomanPSMT_u4;
+	src: url("fonts/TimesNewRomanPSMT_u4.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman_u5;
+	src: url("fonts/TimesNewRoman_u5.woff") format("woff");
+}
+
+</style>
+<div id="pg3Overlay" style="width:100%; height:100%; position:absolute; z-index:1; background-color:rgba(0,0,0,0); -webkit-user-select: none;"></div>
+<div id="pg3" style="-webkit-user-select: none;"><object width="935" height="1210" data="3/3.svg" type="image/svg+xml" id="pdf3" style="width:935px; height:1210px; z-index: 0;"></object></div>
+<div class="text-container"><span id="t1_3" class="t s0_3">1. </span><span id="t2_3" class="t s1_3">EXCLUSIVITÉ </span>
+<span id="t3_3" class="t s2_3">L’Agent agira en tant qu’Agent exclusif du Propriétaire pour gérer, faire fonctionner et entretenir la propriété. </span>
+<span id="t4_3" class="t s0_3">1. </span><span id="t5_3" class="t s1_3">EXCLUSIVITÉ </span>
+<span id="t6_3" class="t s2_3">L’Agent agira en tant qu’Agent exclusif du Propriétaire pour gérer, faire fonctionner et entretenir la propriété. </span>
+<span id="t7_3" class="t s3_3">2</span><span id="t8_3" class="t s0_3">. </span><span id="t9_3" class="t s1_3">DISPOSITIONS À PRENDRE PAR L’AGENT </span>
+<span id="ta_3" class="t s2_3">En assurant la gestion et le fonctionnement de la propriété, l’Agent devra inspecter la propriété et soumettre un rapport écrit au Propriétaire. Le </span>
+<span id="tb_3" class="t s2_3">rapport écrit devra contenir l’avis de l’Agent sur l’efficacité actuelle dans la gestion de la propriété et recommander les changements à apporter </span>
+<span id="tc_3" class="t s2_3">dans la gestion de la structure de la propriété si nécessaire, dans la restauration de la propriété et tout autre changement visant à améliorer la gestion </span>
+<span id="td_3" class="t s2_3">et l’utilisation de la propriété. Après en avoir discuté avec le Propriétaire et obtenu son approbation, l’Agent pourra mettre en œuvre les </span>
+<span id="te_3" class="t s2_3">aménagements. </span>
+<span id="tf_3" class="t s3_3">3</span><span id="tg_3" class="t s0_3">. </span><span id="th_3" class="t s1_3">LOCATION DE LA PROPRIÉTÉ </span>
+<span id="ti_3" class="t s2_3">L’Agent devra prendre les dispositions nécessaires pour louer tout espace disponible sur la propriété et sera responsable de toutes les négociations </span>
+<span id="tj_3" class="t s2_3">avec les futurs locataires. L’Agent aura également le droit de signer au nom du Propriétaire la location mensuelle des unités de la propriété. </span>
+<span id="tk_3" class="t s2_3">L’Agent peut négocier toutes les prorogations et renouvellement des contrats de location mensuelle. L’Agent ne devra signer aucun contrat pour </span>
+<span id="tl_3" class="t s2_3">une durée de moins de ____________ ni de plus de ____________ sans le consentement écrit préalable du Propriétaire. L’Agent aura le droit </span>
+<span id="tm_3" class="t s2_3">d’offrir des rabais sur le loyer comme moyen d’attraction des futurs locataires à occuper la propriété. </span>
+<span id="tn_3" class="t s3_3">4. </span><span id="to_3" class="t s1_3">PUBLICITÉ ET PROMOTION </span>
+<span id="tp_3" class="t s2_3">L’Agent devra utiliser les moyens raisonnables et adéquats pour publier les vacances de l’immeuble ; pourvu que l’Agent n’engage pas des frais </span>
+<span id="tq_3" class="t s2_3">de publicité dépassant_______________ au cours d’un trimestre sans le consentement écrit du Propriétaire. </span>
+<span id="tr_3" class="t s3_3">5. </span><span id="ts_3" class="t s1_3">ENTRETIEN, RÉPARATIONS ET UTILISATION </span>
+<span id="tt_3" class="t s2_3">L’Agent prendra les dispositions nécessaires pour s’assurer que la propriété est maintenue dans une condition susceptible d’attirer les locataires. </span>
+<span id="tu_3" class="t s2_3">À cet égard, l’Agent devra utiliser ses meilleures compétences et faire de son mieux pour servir les locataires de la propriété et acheter les </span>
+<span id="tv_3" class="t s2_3">fournitures. Par ailleurs, l’Agent signera les contrats et fournira l’électricité, le gaz, l’essence, l’eau, le téléphone, les services de ménage ainsi </span>
+<span id="tw_3" class="t s2_3">que les services d’utilité publique requis pour une bonne utilisation de la propriété. L’Agent devra effectuer ou faire effectuer les réparations et </span>
+<span id="tx_3" class="t s2_3">remplacements nécessaires et devra décorer et équiper la propriété. Les dépenses de réparations, de remplacement, de décorations et </span>
+<span id="ty_3" class="t s2_3">d’équipement dépassant _______________ ne peuvent être faites sans le consentement écrit préalable du Propriétaire sauf en cas d’urgence ou </span>
+<span id="tz_3" class="t s2_3">si l’Agent pense en toute bonne foi que ces dépenses sont nécessaires pour protéger la propriété contre un dommage ou pour prévenir des </span>
+<span id="t10_3" class="t s2_3">dommages aux personnes ou une perte de vie humaine ou pour maintenir la continuité du service aux locataires. </span>
+<span id="t11_3" class="t s3_3">6</span><span id="t12_3" class="t s0_3">. </span>
+<span id="t13_3" class="t s2_3">6.1. </span>
+<span id="t14_3" class="t s2_3">6.2. </span>
+<span id="t15_3" class="t s2_3">6.3. </span>
+<span id="t16_3" class="t s1_3">EMPLOYÉS </span>
+<span id="t17_3" class="t s2_3">L’Agent peut employer et superviser les employés sur la propriété ou embaucher les collaborateurs requis pour un entretien efficace de la </span>
+<span id="t18_3" class="t s2_3">propriété. Tout le personnel travaillant sur la propriété, sauf les collaborateurs extérieurs et employés des collaborateurs externes, seront les </span>
+<span id="t19_3" class="t s2_3">employés de l’Agent. L’Agent devra payer les salaires des employés de la propriété, payer tous les frais d’administration des collaborateurs </span>
+<span id="t1a_3" class="t s2_3">externes et employés des collaborateurs externes. </span>
+<span id="t1b_3" class="t s2_3">Tous les salaires (dont toutes les cotisations patronales non mentionnées sur la fiche de paie) du personnel sur site seront facturés au </span>
+<span id="t1c_3" class="t s2_3">Propriétaire. Dans la mesure où il y aura une insuffisance de fonds dans les revenus de la propriété pour rembourser l’Agent pour les </span>
+<span id="t1d_3" class="t s2_3">salaires, le Propriétaire remboursera directement l’Agent au plus tard </span><span id="t1e_3" class="t s4_3">________ </span><span id="t1f_3" class="t s2_3">jours après la demande de remboursement de l’Agent. </span>
+<span id="t1g_3" class="t s2_3">L’Agent ne sera pas responsable devant le Propriétaire pour quelques acte, défaut ou négligence du personnel ni pour aucune erreur de </span>
+<span id="t1h_3" class="t s2_3">jugement ou infraction à la loi dans le cadre de leurs emploi, conduite ou décharge sauf si l’Agent serait responsable de quelques acte ou </span>
+<span id="t1i_3" class="t s2_3">défaut par sa négligence ou omission dans le recrutement ou la supervision du personnel. </span>
+<span id="t1j_3" class="t s2_3">Le personnel inclura les gérants, le personnel de maintenance, tout le personnel de récréation, le personnel de ménage et tous ceux dont les </span>
+<span id="t1k_3" class="t s2_3">services ont été sollicités et rendant service ou accomplissant des tâches sur la propriété dans le cadre de son utilisation. </span></div>
+<input id="form1_3" type="text" tabindex="93" value="" data-objref="843 0 R" title="d&#8217;offrir des rabais sur le loyer comme moyen d&#8217;attraction des futurs locataires &agrave; occuper la propri&eacute;t&eacute;" data-field-name="Nombre"/>
+<input id="form2_3" type="text" tabindex="94" value="" data-objref="842 0 R" title="d&#8217;offrir des rabais sur le loyer comme moyen d&#8217;attraction des futurs locataires &agrave; occuper la propri&eacute;t&eacute;" data-field-name="Nombre"/>
+<input id="form3_3" type="text" tabindex="95" value="" data-objref="844 0 R" title="de publicit&eacute; d&eacute;passant" data-field-name="nombre"/>
+<input id="form4_3" type="text" tabindex="96" value="" data-objref="845 0 R" title="si l&#8217;Agent pense en toute bonne foi que ces d&eacute;penses sont n&eacute;cessaires pour prot&eacute;ger la propri&eacute;t&eacute; contre un dommage ou pour pr&eacute;venir des" data-field-name="si lAgent pense en toute bonne foi que ces dépenses sont nécessaires pour protéger la propriété contre un dommage ou pour prévenir des"/>
+<input id="form5_3" type="text" tabindex="97" value="" data-objref="846 0 R" title="L&#8217;Agent ne sera pas responsable devant le Propri&eacute;taire pour quelques acte, d&eacute;faut ou n&eacute;gligence du personnel ni pour aucune erreur de" data-field-name="LAgent ne sera pas responsable devant le Propriétaire pour quelques acte défaut ou négligence du personnel ni pour aucune erreur de"/>
+
+
+</div>
+
+</div>
+</div>
+<div id="page4" style="width: 935px; height: 1210px; margin-top:20px;" class="page">
+<div class="page-inner" style="width: 935px; height: 1210px;">
+
+<div id="p4" class="pageArea" style="overflow: hidden; position: relative; width: 935px; height: 1210px; margin-top:auto; margin-left:auto; margin-right:auto; background-color: white;">
+<style class="shared-css" type="text/css" >
+.t {
+	transform-origin: bottom left;
+	z-index: 2;
+	position: absolute;
+	white-space: pre;
+	overflow: visible;
+	line-height: 1.5;
+}
+.text-container {
+	white-space: pre;
+}
+@supports (-webkit-touch-callout: none) {
+	.text-container {
+		white-space: normal;
+	}
+}
+</style>
+<style type="text/css" >
+
+#t1_4{left:104px;bottom:978px;letter-spacing:-0.08px;}
+#t2_4{left:159px;bottom:978px;letter-spacing:-0.1px;}
+#t3_4{left:104px;bottom:962px;letter-spacing:-0.1px;}
+#t4_4{left:104px;bottom:928px;letter-spacing:-0.08px;}
+#t5_4{left:159px;bottom:928px;letter-spacing:-0.1px;}
+#t6_4{left:104px;bottom:911px;letter-spacing:-0.11px;}
+#t7_4{left:104px;bottom:878px;letter-spacing:-0.08px;}
+#t8_4{left:159px;bottom:878px;letter-spacing:-0.1px;}
+#t9_4{left:104px;bottom:861px;letter-spacing:-0.1px;}
+#ta_4{left:55px;bottom:1131px;}
+#tb_4{left:62px;bottom:1131px;}
+#tc_4{left:78px;bottom:1131px;letter-spacing:-0.17px;}
+#td_4{left:750px;bottom:1131px;}
+#te_4{left:103px;bottom:1099px;letter-spacing:-0.1px;}
+#tf_4{left:45px;bottom:835px;letter-spacing:-0.07px;}
+#tg_4{left:100px;bottom:835px;letter-spacing:-0.1px;}
+#th_4{left:55px;bottom:1058px;letter-spacing:-0.06px;}
+#ti_4{left:81px;bottom:1058px;letter-spacing:-0.17px;}
+#tj_4{left:48px;bottom:1018px;letter-spacing:-0.08px;}
+#tk_4{left:103px;bottom:1018px;letter-spacing:-0.1px;}
+#tl_4{left:48px;bottom:1002px;letter-spacing:-0.09px;}
+#tm_4{left:103px;bottom:808px;letter-spacing:-0.1px;}
+#tn_4{left:103px;bottom:791px;letter-spacing:-0.1px;}
+#to_4{left:103px;bottom:775px;letter-spacing:-0.1px;}
+#tp_4{left:102px;bottom:660px;letter-spacing:-0.1px;}
+#tq_4{left:46px;bottom:638px;letter-spacing:-0.08px;}
+#tr_4{left:101px;bottom:638px;letter-spacing:-0.1px;}
+#ts_4{left:53px;bottom:722px;letter-spacing:-0.06px;}
+#tt_4{left:79px;bottom:722px;letter-spacing:-0.16px;}
+#tu_4{left:46px;bottom:682px;letter-spacing:-0.08px;}
+#tv_4{left:101px;bottom:682px;letter-spacing:-0.1px;}
+#tw_4{left:101px;bottom:618px;letter-spacing:-0.1px;}
+#tx_4{left:101px;bottom:602px;letter-spacing:-0.1px;}
+#ty_4{left:101px;bottom:585px;letter-spacing:-0.1px;}
+#tz_4{left:44px;bottom:553px;letter-spacing:-0.13px;}
+#t10_4{left:57px;bottom:553px;}
+#t11_4{left:73px;bottom:553px;letter-spacing:-0.16px;}
+#t12_4{left:588px;bottom:553px;}
+#t13_4{left:96px;bottom:522px;letter-spacing:-0.1px;}
+#t14_4{left:96px;bottom:505px;letter-spacing:-0.1px;}
+#t15_4{left:96px;bottom:489px;letter-spacing:-0.1px;}
+#t16_4{left:96px;bottom:472px;letter-spacing:-0.1px;}
+#t17_4{left:96px;bottom:456px;letter-spacing:-0.1px;}
+#t18_4{left:96px;bottom:439px;letter-spacing:-0.1px;}
+#t19_4{left:102px;bottom:345px;letter-spacing:-0.1px;}
+#t1a_4{left:102px;bottom:329px;letter-spacing:-0.1px;}
+#t1b_4{left:102px;bottom:312px;letter-spacing:-0.1px;}
+#t1c_4{left:102px;bottom:296px;letter-spacing:-0.1px;}
+#t1d_4{left:102px;bottom:279px;letter-spacing:-0.08px;}
+#t1e_4{left:151px;bottom:279px;letter-spacing:-0.1px;}
+#t1f_4{left:102px;bottom:263px;letter-spacing:-0.1px;}
+#t1g_4{left:102px;bottom:246px;letter-spacing:-0.12px;word-spacing:-0.01px;}
+#t1h_4{left:46px;bottom:225px;letter-spacing:-0.09px;}
+#t1i_4{left:101px;bottom:225px;letter-spacing:-0.1px;}
+#t1j_4{left:46px;bottom:407px;letter-spacing:-0.08px;}
+#t1k_4{left:80px;bottom:407px;letter-spacing:-0.15px;}
+#t1l_4{left:46px;bottom:367px;letter-spacing:-0.09px;}
+#t1m_4{left:101px;bottom:367px;letter-spacing:-0.1px;}
+#t1n_4{left:104px;bottom:204px;letter-spacing:-0.09px;}
+
+.s0_4{font-size:14px;font-family:TimesNewRoman_u5;color:#000;}
+.s1_4{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#FFF;}
+.s2_4{font-size:14px;font-family:FrutigerLTStd-BlackCn_ts;color:#FFF;}
+.s3_4{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#000;}
+.s4_4{font-size:14px;font-family:FrutigerLTStd-Cn_tw;color:#000;}
+#form1_4{	z-index: 2;	padding: 0px;	position: absolute;	left: 426px;	top: 208px;	width: 101px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form2_4{	z-index: 2;	padding: 0px;	position: absolute;	left: 336px;	top: 309px;	width: 101px;	height: 16px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form3_4{	z-index: 2;	padding: 0px;	position: absolute;	left: 477px;	top: 377px;	width: 101px;	height: 19px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 15px Arial, Helvetica, sans-serif;}
+#form4_4{	z-index: 2;	padding: 0px;	position: absolute;	left: 167px;	top: 944px;	width: 287px;	height: 14px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+
+</style>
+<style id="fonts4" type="text/css" >
+
+@font-face {
+	font-family: FrutigerLTStd-BlackCn_ts;
+	src: url("fonts/FrutigerLTStd-BlackCn_ts.woff") format("woff");
+}
+
+@font-face {
+	font-family: FrutigerLTStd-Cn_tw;
+	src: url("fonts/FrutigerLTStd-Cn_tw.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman-Bold_u2;
+	src: url("fonts/TimesNewRoman-Bold_u2.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman_u5;
+	src: url("fonts/TimesNewRoman_u5.woff") format("woff");
+}
+
+</style>
+<div id="pg4Overlay" style="width:100%; height:100%; position:absolute; z-index:1; background-color:rgba(0,0,0,0); -webkit-user-select: none;"></div>
+<div id="pg4" style="-webkit-user-select: none;"><object width="935" height="1210" data="4/4.svg" type="image/svg+xml" id="pdf4" style="width:935px; height:1210px; z-index: 0;"></object></div>
+<div class="text-container"><span id="t1_4" class="t s0_4">8.1.1. </span><span id="t2_4" class="t s0_4">Une assurance responsabilité pour une limite de _______________ pour la couverture des dommages corporels, les décès et les </span>
+<span id="t3_4" class="t s0_4">dommages sur la propriété ; </span>
+<span id="t4_4" class="t s0_4">8.1.2. </span><span id="t5_4" class="t s0_4">L’assurance incendie et la couverture des catastrophes pour un montant équivalent au coût total de remplacement de la structure et des </span>
+<span id="t6_4" class="t s0_4">aménagements contenus dans la propriété. </span>
+<span id="t7_4" class="t s0_4">8.1.3. </span><span id="t8_4" class="t s0_4">Une assurance d’un montant de _______________  sur chaque employé traitant la trésorerie, les salaires, les rémunérations et </span>
+<span id="t9_4" class="t s0_4">l’assurance responsabilité de l’employeur. </span>
+<span id="ta_4" class="t s1_4">7</span><span id="tb_4" class="t s2_4">. </span><span id="tc_4" class="t s3_4">LOIS ET RÉGLEMENTS GOUVERNEMENTAUX </span><span id="td_4" class="t s4_4">. </span>
+<span id="te_4" class="t s0_4">L’Agent devra gérer la propriété conformément aux lois et règlements régissant la propriété. </span>
+<span id="tf_4" class="t s0_4">8.2. </span><span id="tg_4" class="t s0_4">Toutes les polices devront nommer l’Agent et le Propriétaire comme co-assurés suivant leurs intérêts respectifs. L’Agent devra délivrer une </span>
+<span id="th_4" class="t s1_4">8. </span><span id="ti_4" class="t s3_4">ASSURANCE </span>
+<span id="tj_4" class="t s0_4">8.1. </span><span id="tk_4" class="t s0_4">L’Agent devra signer un contrat d’assurance aux frais du Propriétaire et ce contrat d’assurance devra rester valable par toute la durée du </span>
+<span id="tl_4" class="t s0_4">présent contrat : </span>
+<span id="tm_4" class="t s0_4">attestation de la couverture d’assurance au Propriétaire au plus tard _______________  après l’émission et le renouvellement des polices. Le </span>
+<span id="tn_4" class="t s0_4">Propriétaire devra coopérer avec l’Agent et l’assurance dans la fourniture des rapports, notifications et autres éléments nécessaires dans le cadre </span>
+<span id="to_4" class="t s0_4">de toute police d’assurance. </span>
+<span id="tp_4" class="t s0_4">Il est convenu entre les parties que l’Agent ne garantit pas le recouvrement des loyers. </span>
+<span id="tq_4" class="t s0_4">9.2. </span><span id="tr_4" class="t s0_4">L’Agent devra à son initiative, mais toujours au nom du Propriétaire, signer et donner les notifications aux locataires mauvais payeurs. </span>
+<span id="ts_4" class="t s1_4">9. </span><span id="tt_4" class="t s3_4">RECOUVREMENT DU REVENU; ACTIONS EN JUSTICE </span>
+<span id="tu_4" class="t s0_4">9.1. </span><span id="tv_4" class="t s0_4">L’Agent devra prendre les dispositions nécessaires pour collecter les loyers et autres revenus de la propriété à leur date d’échéance. </span>
+<span id="tw_4" class="t s0_4">L’Agent, toujours au nom du Propriétaire mais avec son consentement écrit préalable, pourra recourir à la justice, à l’arbitrage ou à la médiation </span>
+<span id="tx_4" class="t s0_4">légales contre tout mauvais locataire pour recouvrer le loyer ou toute autre somme due par le locataire, pour faire appliquer les conventions et </span>
+<span id="ty_4" class="t s0_4">conditions de tout contrat de location ou contrat de location mensuelle et recouvrer la possession de toute partie de la propriété. </span>
+<span id="tz_4" class="t s1_4">10</span><span id="t10_4" class="t s2_4">. </span><span id="t11_4" class="t s3_4">COMPTES BANCAIRES </span><span id="t12_4" class="t s4_4">. </span>
+<span id="t13_4" class="t s0_4">L’Agent devra déposer tous les revenus tirés de la propriété dans le compte général de gestion de l’Agent, désigné ici en tant que compte de </span>
+<span id="t14_4" class="t s0_4">fiducie. L’Agent ne devra pas mélanger les revenus décrits ci-dessus avec quelque fonds ou autre propriété de l’Agent. L’Agent paiera tous les </span>
+<span id="t15_4" class="t s0_4">éléments en relation avec la propriété pour lesquels le paiement est prévu par le présent contrat dont la rémunération de l’Agent et les dépôts dans </span>
+<span id="t16_4" class="t s0_4">les comptes de réserve à partir du compte fiduciaire, ainsi que le prévoit la section 11 du présent contrat. Après lesdits paiements l’Agent remettra </span>
+<span id="t17_4" class="t s0_4">tout montant restant des revenus mensuels au Propriétaire concurremment avec la délivrance du rapport mensuel auquel il est fait référence à la </span>
+<span id="t18_4" class="t s0_4">section 12. </span>
+<span id="t19_4" class="t s0_4">les réparations (autre que l’entretien normal), le remplacement du personnel de la propriété, les dépôts remboursables. L’Agent devra utiliser son </span>
+<span id="t1a_4" class="t s0_4">bon sens dans le transfert des fonds adéquats du compte de fiducie au compte de réserve pour le paiement des éléments ci-dessous sans pour </span>
+<span id="t1b_4" class="t s0_4">autant engendrer le paiement de frais de retard, les annulations ou autres. Si le fonds de réserve ne contient pas suffisamment de fonds pour payer </span>
+<span id="t1c_4" class="t s0_4">les éléments cités ci-dessus, l’Agent devra obtenir l’approbation du Propriétaire avant de payer lesdits éléments directement à partir du fonds de </span>
+<span id="t1d_4" class="t s0_4">fiducie. </span><span id="t1e_4" class="t s0_4">Si le Propriétaire pense que les fonds se trouvant dans le compte de réserve sont excessifs, le Propriétaire pourra demander à l’Agent de </span>
+<span id="t1f_4" class="t s0_4">remettre cet excédent dans le compte de fiducie. Le compte de réserve devra être un compte d’épargne avec intérêt dans une banque nationale </span>
+<span id="t1g_4" class="t s0_4">membre de __________________________________________. </span>
+<span id="t1h_4" class="t s0_4">11.2 </span><span id="t1i_4" class="t s0_4">Nonobstant toute disposition contraire du présent contrat, l’Agent ne sera pas responsable de l’épuisement des fonds sauf négligence ou acte </span>
+<span id="t1j_4" class="t s1_4">11. </span><span id="t1k_4" class="t s3_4">COMPTE DE RÉSERVE </span>
+<span id="t1l_4" class="t s0_4">11.1 </span><span id="t1m_4" class="t s0_4">L’Agent devra ouvrir un compte de réserve pour les éléments suivants : les taxes, les évaluations, le service de dette, les primes d’assurance, </span>
+<span id="t1n_4" class="t s0_4">illégal de sa part. </span></div>
+<input id="form1_4" type="text" tabindex="98" value="" data-objref="913 0 R" title="pour la couverture des dommages corporels, les d&eacute;c&egrave;s et les" data-field-name="pour la couverture des dommages corporels les décès et les"/>
+<input id="form2_4" type="text" tabindex="99" value="" data-objref="914 0 R" title="Une assurance d&#8217;un montant de" data-field-name="Une assurance dun montant de"/>
+<input id="form3_4" type="text" tabindex="100" value="" data-objref="916 0 R" title="Propri&eacute;taire devra coop&eacute;rer avec l&#8217;Agent et l&#8217;assurance dans la fourniture des rapports, notifications et autres &eacute;l&eacute;ments n&eacute;cessaires dans le cadre" data-field-name="Propriétaire devra coopérer avec lAgent et lassurance dans la fourniture des rapports notifications et autres éléments nécessaires dans le cadre"/>
+<input id="form4_4" type="text" tabindex="101" value="" data-objref="915 0 R" title="Nonobstant toute disposition contraire du pr&eacute;sent contrat, l&#8217;Agent ne sera pas responsable de l&#8217;&eacute;puisement des fonds sauf n&eacute;gligence ou acte" data-field-name="Nonobstant toute disposition contraire du présent contrat lAgent ne sera pas responsable de lépuisement des fonds sauf négligence ou acte"/>
+
+
+</div>
+
+</div>
+</div>
+<div id="page5" style="width: 935px; height: 1210px; margin-top:20px;" class="page">
+<div class="page-inner" style="width: 935px; height: 1210px;">
+
+<div id="p5" class="pageArea" style="overflow: hidden; position: relative; width: 935px; height: 1210px; margin-top:auto; margin-left:auto; margin-right:auto; background-color: white;">
+<style class="shared-css" type="text/css" >
+.t {
+	transform-origin: bottom left;
+	z-index: 2;
+	position: absolute;
+	white-space: pre;
+	overflow: visible;
+	line-height: 1.5;
+}
+.text-container {
+	white-space: pre;
+}
+@supports (-webkit-touch-callout: none) {
+	.text-container {
+		white-space: normal;
+	}
+}
+</style>
+<style type="text/css" >
+
+#t1_5{left:55px;bottom:1145px;letter-spacing:-0.13px;}
+#t2_5{left:69px;bottom:1145px;}
+#t3_5{left:85px;bottom:1145px;letter-spacing:-0.16px;}
+#t4_5{left:48px;bottom:1108px;letter-spacing:-0.1px;word-spacing:0.06px;}
+#t5_5{left:49px;bottom:1025px;letter-spacing:-0.09px;word-spacing:-1.52px;}
+#t6_5{left:76px;bottom:893px;letter-spacing:-0.1px;}
+#t7_5{left:76px;bottom:876px;letter-spacing:-0.1px;}
+#t8_5{left:47px;bottom:915px;letter-spacing:-0.1px;}
+#t9_5{left:74px;bottom:1086px;letter-spacing:-0.1px;}
+#ta_5{left:74px;bottom:1070px;letter-spacing:-0.1px;}
+#tb_5{left:74px;bottom:1053px;letter-spacing:-0.1px;}
+#tc_5{left:76px;bottom:1003px;letter-spacing:-0.1px;}
+#td_5{left:76px;bottom:986px;letter-spacing:-0.1px;}
+#te_5{left:76px;bottom:969px;letter-spacing:-0.1px;}
+#tf_5{left:76px;bottom:953px;letter-spacing:-0.1px;}
+#tg_5{left:76px;bottom:936px;letter-spacing:-0.09px;}
+#th_5{left:52px;bottom:820px;letter-spacing:-0.13px;}
+#ti_5{left:65px;bottom:820px;}
+#tj_5{left:82px;bottom:820px;letter-spacing:-0.16px;}
+#tk_5{left:596px;bottom:821px;}
+#tl_5{left:105px;bottom:790px;letter-spacing:-0.1px;}
+#tm_5{left:104px;bottom:774px;letter-spacing:-0.1px;}
+#tn_5{left:104px;bottom:757px;letter-spacing:-0.1px;}
+#to_5{left:51px;bottom:710px;letter-spacing:-0.13px;}
+#tp_5{left:64px;bottom:710px;}
+#tq_5{left:81px;bottom:710px;letter-spacing:-0.16px;}
+#tr_5{left:595px;bottom:713px;}
+#ts_5{left:103px;bottom:681px;letter-spacing:-0.1px;}
+#tt_5{left:103px;bottom:665px;letter-spacing:-0.1px;}
+#tu_5{left:47px;bottom:614px;letter-spacing:-0.13px;}
+#tv_5{left:61px;bottom:614px;}
+#tw_5{left:77px;bottom:614px;letter-spacing:-0.15px;}
+#tx_5{left:592px;bottom:617px;}
+#ty_5{left:104px;bottom:582px;letter-spacing:-0.1px;}
+#tz_5{left:104px;bottom:565px;letter-spacing:-0.12px;}
+#t10_5{left:104px;bottom:549px;letter-spacing:-0.14px;}
+#t11_5{left:48px;bottom:509px;letter-spacing:-0.13px;}
+#t12_5{left:62px;bottom:509px;}
+#t13_5{left:78px;bottom:509px;letter-spacing:-0.15px;}
+#t14_5{left:592px;bottom:509px;}
+#t15_5{left:105px;bottom:473px;letter-spacing:-0.1px;}
+#t16_5{left:105px;bottom:457px;letter-spacing:-0.1px;}
+#t17_5{left:105px;bottom:440px;letter-spacing:-0.1px;}
+#t18_5{left:105px;bottom:407px;letter-spacing:-0.1px;}
+#t19_5{left:105px;bottom:391px;letter-spacing:-0.1px;}
+#t1a_5{left:105px;bottom:374px;letter-spacing:-0.09px;}
+#t1b_5{left:47px;bottom:340px;letter-spacing:-0.13px;}
+#t1c_5{left:61px;bottom:340px;}
+#t1d_5{left:77px;bottom:340px;letter-spacing:-0.16px;}
+#t1e_5{left:591px;bottom:340px;}
+#t1f_5{left:104px;bottom:304px;letter-spacing:-0.1px;}
+#t1g_5{left:104px;bottom:288px;letter-spacing:-0.1px;}
+#t1h_5{left:104px;bottom:271px;letter-spacing:-0.1px;}
+#t1i_5{left:47px;bottom:231px;letter-spacing:-0.13px;}
+#t1j_5{left:61px;bottom:231px;}
+#t1k_5{left:77px;bottom:231px;letter-spacing:-0.17px;}
+#t1l_5{left:592px;bottom:231px;}
+#t1m_5{left:104px;bottom:196px;letter-spacing:-0.1px;}
+#t1n_5{left:104px;bottom:179px;letter-spacing:-0.1px;}
+#t1o_5{left:104px;bottom:163px;letter-spacing:-0.09px;}
+
+.s0_5{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#FFF;}
+.s1_5{font-size:14px;font-family:FrutigerLTStd-BlackCn_ts;color:#FFF;}
+.s2_5{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#000;}
+.s3_5{font-size:14px;font-family:TimesNewRoman_u5;color:#000;}
+.s4_5{font-size:14px;font-family:FrutigerLTStd-Cn_tw;color:#000;}
+#form1_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 139px;	top: 138px;	width: 40px;	height: 13px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form2_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 147px;	top: 272px;	width: 81px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form3_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 697px;	top: 293px;	width: 88px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form4_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 419px;	top: 397px;	width: 32px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form5_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 361px;	top: 432px;	width: 87px;	height: 14px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form6_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 497px;	top: 605px;	width: 67px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form7_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 587px;	top: 605px;	width: 67px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form8_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 411px;	top: 883px;	width: 73px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form9_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 579px;	top: 883px;	width: 75px;	height: 17px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 13px Arial, Helvetica, sans-serif;}
+#form10_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 269px;	top: 918px;	width: 102px;	height: 14px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form11_5{	z-index: 2;	padding: 0px;	position: absolute;	left: 301px;	top: 1011px;	width: 101px;	height: 14px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+
+</style>
+<style id="fonts5" type="text/css" >
+
+@font-face {
+	font-family: FrutigerLTStd-BlackCn_ts;
+	src: url("fonts/FrutigerLTStd-BlackCn_ts.woff") format("woff");
+}
+
+@font-face {
+	font-family: FrutigerLTStd-Cn_tw;
+	src: url("fonts/FrutigerLTStd-Cn_tw.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman-Bold_u2;
+	src: url("fonts/TimesNewRoman-Bold_u2.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman_u5;
+	src: url("fonts/TimesNewRoman_u5.woff") format("woff");
+}
+
+</style>
+<div id="pg5Overlay" style="width:100%; height:100%; position:absolute; z-index:1; background-color:rgba(0,0,0,0); -webkit-user-select: none;"></div>
+<div id="pg5" style="-webkit-user-select: none;"><object width="935" height="1210" data="5/5.svg" type="image/svg+xml" id="pdf5" style="width:935px; height:1210px; z-index: 0;"></object></div>
+<div class="text-container"><span id="t1_5" class="t s0_5">12</span><span id="t2_5" class="t s1_5">. </span><span id="t3_5" class="t s2_5">ENREGISTREMENTS ET RAPPORTS </span>
+<span id="t4_5" class="t s3_5">12.1 L’Agent tiendra des livres, comptes et enregistrements reflétant tous les revenus et dépenses engages dans le cadre de la gestion et de </span>
+<span id="t5_5" class="t s3_5">12.2 L’Agent devra fournir au Propriétaire, au plus tard à la fin du mois suivant, un état détaillé de tous les revenus et dépenses du mois précédent, un résumé </span>
+<span id="t6_5" class="t s3_5">des dépenses engagées et payées au cours de l’année et résultant du fonctionnement de la propriété. Au plus tard _____________ après </span>
+<span id="t7_5" class="t s3_5">l’expiration ou la fin du présent contrat, l’Agent devra délivrer au Propriétaire tous les livres, comptes et enregistrements relatifs à la propriété. </span>
+<span id="t8_5" class="t s3_5">12.3 Au plus tard ____________ après la fin de chaque année, l’Agent devra préparer et délivrer au Propriétaire un état détaillé des revenus perçus et </span>
+<span id="t9_5" class="t s3_5">de la propriété. Les livres, comptes et enregistrements seront tenus au siège principal de l’Agent. L’Agent mettra les livres, comptes et </span>
+<span id="ta_5" class="t s3_5">enregistrements à la disposition du Propriétaire ou de ses représentants pendant les heures ouvrables pour examen et audit après une notification </span>
+<span id="tb_5" class="t s3_5">d’au moins ______ jours à l’avance. Les audits se feront aux frais du Propriétaire. </span>
+<span id="tc_5" class="t s3_5">de toutes les concessions et concessions de loyer accordées pour attirer les futurs locataires à occuper la propriété, la copie originale de toutes les </span>
+<span id="td_5" class="t s3_5">factures, états, bons de commande, reçus et paies au cours du mois précédent ainsi que toute autre information en relation avec l’utilisation ou la </span>
+<span id="te_5" class="t s3_5">gestion de la propriété qui, de l’avis de l’Agent, requiert l’attention du Propriétaire. Le Propriétaire devra mettre à la disposition de l’Agent au </span>
+<span id="tf_5" class="t s3_5">paiement des frais raisonnables engagés par lui les copies et toute ou une partie des factures, états, bons de commande et autres documents reçus </span>
+<span id="tg_5" class="t s3_5">de l’Agent relatifs à la propriété. </span>
+<span id="th_5" class="t s0_5">13</span><span id="ti_5" class="t s1_5">. </span><span id="tj_5" class="t s2_5">RÉMUNÉRATION DE L’AGENT </span><span id="tk_5" class="t s4_5">. </span>
+<span id="tl_5" class="t s3_5">L’Agent percevra des honoraires de gestion équivalant à _____% des revenus bruts collectés de l’utilisation de la propriété. Les revenus </span>
+<span id="tm_5" class="t s3_5">bruts sont définis comme tous les revenus perçus déduits des cautions remboursables. Tout honoraire de gestion dû dans le cadre présent à </span>
+<span id="tn_5" class="t s3_5">l’Agent devra être payé à l’Agent au plus tard _____________ après la fin de chaque mois. </span>
+<span id="to_5" class="t s0_5">14</span><span id="tp_5" class="t s1_5">. </span><span id="tq_5" class="t s2_5">COMMISSIONS POUR LA NÉGOCIATION DES CONTRATS DE LOCATION ET DES CONTRATS DE LOCATION MENSUELLE </span>
+<span id="tr_5" class="t s4_5">. </span>
+<span id="ts_5" class="t s3_5">L’Agent ne percevra aucune commission ni compensation complémentaire pour la négociation des contrats de location ou contrat de loyer </span>
+<span id="tt_5" class="t s3_5">mensuel avec les locataires. </span>
+<span id="tu_5" class="t s0_5">15</span><span id="tv_5" class="t s1_5">. </span><span id="tw_5" class="t s2_5">ESPACE RÉSERVÉ POUR LE BUREAU DE L’AGENT </span>
+<span id="tx_5" class="t s4_5">. </span>
+<span id="ty_5" class="t s3_5">Le Propriétaire devra permettre à l’Agent d’occuper le bureau numéro  __________ du __________ étage de la propriété, sans loyer </span>
+<span id="tz_5" class="t s3_5">pendant toute la durée du présent contrat. [TOUTES LES DÉPENSES AUTRES QUE LE LOYER ENGAGÉ PAR L’AGENT DANS </span>
+<span id="t10_5" class="t s3_5">L’OCCUPATION ET L’UTILISATION DU BUREAU SERONT PRISES EN CHARGE PAR L’AGENT]. </span>
+<span id="t11_5" class="t s0_5">16</span><span id="t12_5" class="t s1_5">. </span><span id="t13_5" class="t s2_5">AUTRES OBLIGATIONS ET DROITS DE L’AGENT </span><span id="t14_5" class="t s4_5">. </span>
+<span id="t15_5" class="t s3_5">En plus de ce qui précède, l’Agent assurera tous les services nécessaires et adéquats pour le fonctionnement et la gestion de la </span>
+<span id="t16_5" class="t s3_5">propriété et devra rapporter immédiatement au Propriétaire tout état de la propriété qui, de l’avis de l’Agent, requiert l’attention du </span>
+<span id="t17_5" class="t s3_5">Propriétaire. </span>
+<span id="t18_5" class="t s3_5">Afin de bien assurer les services requis par le présent contrat, l’Agent est autorisé à engager, au nom du Propriétaire, toute entité </span>
+<span id="t19_5" class="t s3_5">affiliée de l’Agent, pourvu que la rémunération payée pour les services ne fasse pas concurrence par les entités non affiliées assurant </span>
+<span id="t1a_5" class="t s3_5">les services similaires. </span>
+<span id="t1b_5" class="t s0_5">17</span><span id="t1c_5" class="t s1_5">. </span><span id="t1d_5" class="t s2_5">FIN ET RENOUVELLEMENT DU CONTRAT </span><span id="t1e_5" class="t s4_5">. </span>
+<span id="t1f_5" class="t s3_5">Le présent contrat couvrira une période commençant le ___________ et prenant fin le ___________. À la fin du présent contrat, il sera </span>
+<span id="t1g_5" class="t s3_5">automatiquement renouvelé sur une base mensuelle pouvant prendre fin sur décision de l’une quelconque des parties par une </span>
+<span id="t1h_5" class="t s3_5">notification écrite d’au moins _______________ adressée à l’autre partie. </span>
+<span id="t1i_5" class="t s0_5">18</span><span id="t1j_5" class="t s1_5">. </span><span id="t1k_5" class="t s2_5">RUPTURE MOTIVÉE </span><span id="t1l_5" class="t s4_5">. </span>
+<span id="t1m_5" class="t s3_5">Si l’Agent viole un des termes du présent contrat, le Propriétaire devra adresser une notification écrite à l’Agent. Si l’Agent ne </span>
+<span id="t1n_5" class="t s3_5">corrige par la violation au plus tard _______________ après réception de ladite notification, le Propriétaire pourra mettre fin au </span>
+<span id="t1o_5" class="t s3_5">contrat. </span></div>
+<input id="form1_5" type="text" tabindex="102" value="" data-objref="988 0 R" title="12.2 L&#8217;Agent devra fournir au Propri&eacute;taire, au plus tard &agrave; la fin du mois suivant, un &eacute;tat d&eacute;taill&eacute; de tous les revenus et d&eacute;penses du mois pr&eacute;c&eacute;dent, un r&eacute;sum&eacute;" data-field-name="122 LAgent devra fournir au Propriétaire au plus tard à la fin du mois suivant un état détaillé de tous les revenus et dépenses du mois précédent un résumé"/>
+<input id="form2_5" type="text" tabindex="103" value="" data-objref="989 0 R" title="des d&eacute;penses engag&eacute;es et pay&eacute;es au cours de l&#8217;ann&eacute;e et r&eacute;sultant du fonctionnement de la propri&eacute;t&eacute;. Au plus tard" data-field-name="des dépenses engagées et payées au cours de lannée et résultant du fonctionnement de la propriété Au plus tard"/>
+<input id="form3_5" type="text" tabindex="104" value="" data-objref="990 0 R" title="l&#8217;expiration ou la fin du pr&eacute;sent contrat, l&#8217;Agent devra d&eacute;livrer au Propri&eacute;taire tous les livres, comptes et enregistrements relatifs &agrave; la propri&eacute;t&eacute;" data-field-name="lexpiration ou la fin du présent contrat lAgent devra délivrer au Propriétaire tous les livres comptes et enregistrements relatifs à la propriété"/>
+<input id="form4_5" type="text" tabindex="105" value="" data-objref="994 0 R" title="bruts sont d&eacute;finis comme tous les revenus per&ccedil;us d&eacute;duits des cautions remboursables. Tout honoraire de gestion d&ucirc; dans le cadre pr&eacute;sent &agrave;" data-field-name="bruts sont définis comme tous les revenus perçus déduits des cautions remboursables Tout honoraire de gestion dû dans le cadre présent à"/>
+<input id="form5_5" type="text" tabindex="106" value="" data-objref="992 0 R" title="l&#8217;Agent devra &ecirc;tre pay&eacute; &agrave; l&#8217;Agent au plus tard" data-field-name="lAgent devra être payé à lAgent au plus tard"/>
+<input id="form6_5" type="text" tabindex="107" value="" data-objref="996 0 R" title="pendant toute la dur&eacute;e du pr&eacute;sent contrat. [TOUTES LES DÉPENSES AUTRES QUE LE LOYER ENGAGÉ PAR L&#8217;AGENT DANS" data-field-name="pendant toute la durée du présent contrat TOUTES LES DÉPENSES AUTRES QUE LE LOYER ENGAGÉ PAR LAGENT DANS"/>
+<input id="form7_5" type="text" tabindex="108" value="" data-objref="995 0 R" title="du" data-field-name="du"/>
+<input id="form8_5" type="text" tabindex="109" value="" data-objref="1000 0 R" title="automatiquement renouvel&eacute; sur une base mensuelle pouvant prendre fin sur d&eacute;cision de l&#8217;une quelconque des parties par une" data-field-name="automatiquement renouvelé sur une base mensuelle pouvant prendre fin sur décision de lune quelconque des parties par une"/>
+<input id="form9_5" type="text" tabindex="110" value="" data-objref="997 0 R" title="À la fin du pr&eacute;sent contrat, il sera" data-field-name="À la fin du présent contrat il sera"/>
+<input id="form10_5" type="text" tabindex="111" value="" data-objref="993 0 R" title="notification &eacute;crite d&#8217;au moins" data-field-name="notification écrite dau moins"/>
+<input id="form11_5" type="text" tabindex="112" value="" data-objref="999 0 R" title="corrige par la violation au plus tard" data-field-name="corrige par la violation au plus tard"/>
+
+
+</div>
+
+</div>
+</div>
+<div id="page6" style="width: 935px; height: 1210px; margin-top:20px;" class="page">
+<div class="page-inner" style="width: 935px; height: 1210px;">
+
+<div id="p6" class="pageArea" style="overflow: hidden; position: relative; width: 935px; height: 1210px; margin-top:auto; margin-left:auto; margin-right:auto; background-color: white;">
+<style class="shared-css" type="text/css" >
+.t {
+	transform-origin: bottom left;
+	z-index: 2;
+	position: absolute;
+	white-space: pre;
+	overflow: visible;
+	line-height: 1.5;
+}
+.text-container {
+	white-space: pre;
+}
+@supports (-webkit-touch-callout: none) {
+	.text-container {
+		white-space: normal;
+	}
+}
+</style>
+<style type="text/css" >
+
+#t1_6{left:53px;bottom:1136px;letter-spacing:-0.13px;}
+#t2_6{left:67px;bottom:1136px;}
+#t3_6{left:83px;bottom:1136px;letter-spacing:-0.15px;}
+#t4_6{left:74px;bottom:1110px;letter-spacing:-0.1px;}
+#t5_6{left:74px;bottom:1093px;letter-spacing:-0.1px;}
+#t6_6{left:53px;bottom:1061px;letter-spacing:-0.13px;}
+#t7_6{left:66px;bottom:1061px;}
+#t8_6{left:83px;bottom:1061px;letter-spacing:-0.18px;}
+#t9_6{left:74px;bottom:1036px;letter-spacing:-0.1px;}
+#ta_6{left:74px;bottom:1019px;letter-spacing:-0.1px;word-spacing:-0.01px;}
+#tb_6{left:74px;bottom:1002px;letter-spacing:-0.1px;}
+#tc_6{left:54px;bottom:966px;letter-spacing:-0.13px;}
+#td_6{left:67px;bottom:966px;}
+#te_6{left:84px;bottom:966px;letter-spacing:-0.15px;}
+#tf_6{left:75px;bottom:942px;letter-spacing:-0.1px;}
+#tg_6{left:75px;bottom:925px;letter-spacing:-0.1px;}
+#th_6{left:75px;bottom:908px;letter-spacing:-0.1px;}
+#ti_6{left:52px;bottom:870px;letter-spacing:-0.13px;}
+#tj_6{left:66px;bottom:870px;}
+#tk_6{left:82px;bottom:870px;letter-spacing:-0.15px;}
+#tl_6{left:73px;bottom:847px;letter-spacing:-0.1px;}
+#tm_6{left:73px;bottom:830px;letter-spacing:-0.1px;}
+#tn_6{left:51px;bottom:794px;letter-spacing:-0.13px;}
+#to_6{left:65px;bottom:794px;}
+#tp_6{left:82px;bottom:794px;letter-spacing:-0.15px;}
+#tq_6{left:73px;bottom:770px;letter-spacing:-0.1px;}
+#tr_6{left:73px;bottom:753px;letter-spacing:-0.1px;}
+#ts_6{left:51px;bottom:716px;letter-spacing:-0.13px;}
+#tt_6{left:65px;bottom:716px;}
+#tu_6{left:81px;bottom:716px;letter-spacing:-0.15px;}
+#tv_6{left:72px;bottom:692px;letter-spacing:-0.1px;}
+#tw_6{left:53px;bottom:657px;letter-spacing:-0.13px;}
+#tx_6{left:66px;bottom:657px;}
+#ty_6{left:83px;bottom:657px;letter-spacing:-0.16px;}
+#tz_6{left:74px;bottom:632px;letter-spacing:-0.1px;}
+#t10_6{left:53px;bottom:600px;letter-spacing:-0.13px;}
+#t11_6{left:66px;bottom:600px;}
+#t12_6{left:83px;bottom:600px;letter-spacing:-0.15px;}
+#t13_6{left:74px;bottom:576px;letter-spacing:-0.1px;}
+#t14_6{left:74px;bottom:560px;letter-spacing:-0.1px;}
+#t15_6{left:74px;bottom:543px;letter-spacing:-0.1px;}
+#t16_6{left:74px;bottom:527px;letter-spacing:-0.1px;}
+#t17_6{left:51px;bottom:488px;letter-spacing:-0.13px;}
+#t18_6{left:65px;bottom:488px;}
+#t19_6{left:82px;bottom:488px;letter-spacing:-0.15px;}
+#t1a_6{left:73px;bottom:466px;letter-spacing:-0.1px;}
+#t1b_6{left:73px;bottom:449px;letter-spacing:-0.1px;}
+#t1c_6{left:73px;bottom:433px;letter-spacing:-0.1px;}
+#t1d_6{left:73px;bottom:416px;letter-spacing:-0.09px;}
+#t1e_6{left:50px;bottom:378px;letter-spacing:-0.1px;}
+#t1f_6{left:80px;bottom:378px;letter-spacing:-0.16px;}
+#t1g_6{left:68px;bottom:359px;letter-spacing:-0.09px;}
+#t1h_6{left:68px;bottom:339px;letter-spacing:-0.1px;word-spacing:-0.01px;}
+#t1i_6{left:68px;bottom:320px;letter-spacing:-0.13px;}
+#t1j_6{left:50px;bottom:283px;letter-spacing:-0.1px;}
+#t1k_6{left:80px;bottom:283px;letter-spacing:-0.16px;}
+#t1l_6{left:68px;bottom:265px;letter-spacing:-0.1px;}
+#t1m_6{left:68px;bottom:246px;letter-spacing:-0.1px;}
+#t1n_6{left:68px;bottom:228px;letter-spacing:-0.1px;}
+#t1o_6{left:68px;bottom:209px;letter-spacing:-0.1px;}
+#t1p_6{left:50px;bottom:171px;letter-spacing:-0.1px;}
+#t1q_6{left:80px;bottom:171px;letter-spacing:-0.17px;}
+#t1r_6{left:68px;bottom:151px;letter-spacing:-0.1px;}
+#t1s_6{left:68px;bottom:130px;letter-spacing:-0.12px;}
+#t1t_6{left:45px;bottom:90px;letter-spacing:-0.1px;}
+#t1u_6{left:75px;bottom:90px;letter-spacing:-0.16px;}
+#t1v_6{left:67px;bottom:65px;letter-spacing:-0.1px;}
+
+.s0_6{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#FFF;}
+.s1_6{font-size:14px;font-family:FrutigerLTStd-BlackCn_ts;color:#FFF;}
+.s2_6{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#000;}
+.s3_6{font-size:14px;font-family:TimesNewRoman_u5;color:#000;}
+#form1_6{	z-index: 2;	padding: 0px;	position: absolute;	left: 603px;	top: 854px;	width: 260px;	height: 14px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form2_6{	z-index: 2;	padding: 0px;	position: absolute;	left: 69px;	top: 1060px;	width: 183px;	height: 14px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 12px Arial, Helvetica, sans-serif;}
+#form3_6{	z-index: 2;	padding: 0px;	position: absolute;	left: 112px;	top: 284px;	width: 35px;	height: 19px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 18px Arial, Helvetica, sans-serif;}
+
+</style>
+<style id="fonts6" type="text/css" >
+
+@font-face {
+	font-family: FrutigerLTStd-BlackCn_ts;
+	src: url("fonts/FrutigerLTStd-BlackCn_ts.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman-Bold_u2;
+	src: url("fonts/TimesNewRoman-Bold_u2.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman_u5;
+	src: url("fonts/TimesNewRoman_u5.woff") format("woff");
+}
+
+</style>
+<div id="pg6Overlay" style="width:100%; height:100%; position:absolute; z-index:1; background-color:rgba(0,0,0,0); -webkit-user-select: none;"></div>
+<div id="pg6" style="-webkit-user-select: none;"><object width="935" height="1210" data="6/6.svg" type="image/svg+xml" id="pdf6" style="width:935px; height:1210px; z-index: 0;"></object></div>
+<div class="text-container"><span id="t1_6" class="t s0_6">19</span><span id="t2_6" class="t s1_6">. </span><span id="t3_6" class="t s2_6">VENTE DE LA PROPRIÉTÉ </span>
+<span id="t4_6" class="t s3_6">En cas de vente volontaire de la propriété par le Propriétaire et la délivrance d’un acte de transfert du titre de propriété, le présent contrat prendra </span>
+<span id="t5_6" class="t s3_6">automatiquement fin. Le Propriétaire devra notifier à l’Agent la vente de la propriété aussitôt après la négociation de ladite. </span>
+<span id="t6_6" class="t s0_6">20</span><span id="t7_6" class="t s1_6">. </span><span id="t8_6" class="t s2_6">CONDAMNATION </span>
+<span id="t9_6" class="t s3_6">Le présent contrat prendra fin en cas de condamnation totale de la propriété. En cas de condamnation partielle de la propriété, le présent contrat </span>
+<span id="ta_6" class="t s3_6">peut prendre fin si le Propriétaire le souhaite. Si une telle condamnation partielle réduit la rémunération de l’Agent de plus de ___%, l’Agent </span>
+<span id="tb_6" class="t s3_6">peut mettre fin au présent contrat. Le Propriétaire bénéficiera de tous les dommages et indemnisations résultant d’une expropriation du domaine. </span>
+<span id="tc_6" class="t s0_6">21</span><span id="td_6" class="t s1_6">. </span><span id="te_6" class="t s2_6">FAILLITE </span>
+<span id="tf_6" class="t s3_6">Si une procédure de mise en faillite, qu’elle soit volontaire ou non, est engagée soit contre le Propriétaire ou l’Agent ou si l’une des parties </span>
+<span id="tg_6" class="t s3_6">signe une proposition avec ses créanciers, l’une quelconque des parties pourra mettre fin au contrat en adressant une notification écrite d’au </span>
+<span id="th_6" class="t s3_6">moins _____ jours au préalable adressée à l’autre partie. </span>
+<span id="ti_6" class="t s0_6">22</span><span id="tj_6" class="t s1_6">. </span><span id="tk_6" class="t s2_6">NON-CRÉATION D’INTÉRÊT SUR LA PROPRIÉTÉ </span>
+<span id="tl_6" class="t s3_6">Aucune disposition du présent contrat ne peut être considérée comme créant un intérêt ni interprétée comme créant un intérêt de l’Agent </span>
+<span id="tm_6" class="t s3_6">dans ou sur la propriété. </span>
+<span id="tn_6" class="t s0_6">23</span><span id="to_6" class="t s1_6">. </span><span id="tp_6" class="t s2_6">OBTENTION DE LICENCE PAR L’AGENT </span>
+<span id="tq_6" class="t s3_6">L’Agent devra à tout moment pendant la durée du présent contrat détenir les licences et permis nécessaires pour les divers services à </span>
+<span id="tr_6" class="t s3_6">fournir par l’Agent au nom du Propriétaire. </span>
+<span id="ts_6" class="t s0_6">24</span><span id="tt_6" class="t s1_6">. </span><span id="tu_6" class="t s2_6">RELATION ENTRE LES PARTIES </span>
+<span id="tv_6" class="t s3_6">L’Agent est un collaborateur externe et non un employé du Propriétaire. </span>
+<span id="tw_6" class="t s0_6">25</span><span id="tx_6" class="t s1_6">. </span><span id="ty_6" class="t s2_6">NOTIFICATION </span>
+<span id="tz_6" class="t s3_6">L’Agent est un collaborateur externe et non un employé du Propriétaire. </span>
+<span id="t10_6" class="t s0_6">26</span><span id="t11_6" class="t s1_6">. </span><span id="t12_6" class="t s2_6">PARTIES LIÉES; TRANSFERT </span>
+<span id="t13_6" class="t s3_6">Le présent contrat sera au bénéfice des parties et de leurs héritiers, exécuteurs, administrateurs, successeurs et mandataires respectifs; pourvu </span>
+<span id="t14_6" class="t s3_6">cependant que le présent ne puisse être transféré par l’Agent sans le consentement préalable écrit du Propriétaire ni par le Propriétaire sans le </span>
+<span id="t15_6" class="t s3_6">consentement préalable de l’Agent. Indépendamment de ce qui précède, l’Agent peut, sans le consentement du Propriétaire, déléguer </span>
+<span id="t16_6" class="t s3_6">l’accomplissement (mais pas la responsabilité) des devoirs et obligations de l’Agent à un collaborateur externe ou entité. </span>
+<span id="t17_6" class="t s0_6">27</span><span id="t18_6" class="t s1_6">. </span><span id="t19_6" class="t s2_6">INTERPRÉTATION ET INVALIDITÉ PARTIELLE </span>
+<span id="t1a_6" class="t s3_6">Dans la mesure du possible, les dispositions du présent contrat seront interprétées pour en favoriser l’application. Si une disposition du </span>
+<span id="t1b_6" class="t s3_6">présent contrat était invalidée un tribunal compétent, il est de l’intention des parties que les autres dispositions du contrat demeurent </span>
+<span id="t1c_6" class="t s3_6">applicables. Au cas où un tribunal compétent prononcerait la non-applicabilité ou la nullité d’une ou de plusieurs dispositions du contrat, il </span>
+<span id="t1d_6" class="t s3_6">est de l’intention des parties que le tribunal les interprète de la façon la plus compatible avec l’intention originale des parties. </span>
+<span id="t1e_6" class="t s0_6">28. </span><span id="t1f_6" class="t s2_6">DROIT APPLICABLE </span>
+<span id="t1g_6" class="t s3_6">Tout différend se rapportant à la validité, la caducité, la nullité, l’interprétation, l’exécution, l’inexécution, la prorogation, l’interruption, la </span>
+<span id="t1h_6" class="t s3_6">résiliation ou la résolution du présent contrat sera soumis exclusivement à l’application du  droit ______________________________________ </span>
+<span id="t1i_6" class="t s3_6">[PRÉCISER LE DROIT APPLICABLE]. </span>
+<span id="t1j_6" class="t s0_6">29. </span><span id="t1k_6" class="t s2_6">ENTIÈRETÉ DU CONTRAT </span>
+<span id="t1l_6" class="t s3_6">Le présent contrat ainsi que tout autre contrat, accord, entente et annexe auquel il fait référence constitue l’expression finale, complète et </span>
+<span id="t1m_6" class="t s3_6">exclusive des modalités du contrat entre les parties eu égard à l’objet du présent contrat. Le présent contrat se substitue à tout contrat, accord, </span>
+<span id="t1n_6" class="t s3_6">entente et annexe actuels ou antérieurs auquel il ne fait pas explicitement référence. Aucune partie n’a conclu le présent contrat en se basant sur </span>
+<span id="t1o_6" class="t s3_6">tout autre contrat, accord, entente, promesse, engagement ou garantie autres que ceux explicitement intégrés et décrits par le présent contrat. </span>
+<span id="t1p_6" class="t s0_6">30. </span><span id="t1q_6" class="t s2_6">ARBITRAGE </span>
+<span id="t1r_6" class="t s3_6">En cas de dispute eu égard aux dispositions du présent contrat, la dispute sera soumise à l’arbitrage conformément aux règles et règlements de </span>
+<span id="t1s_6" class="t s3_6">___________________________ . </span>
+<span id="t1t_6" class="t s0_6">31. </span><span id="t1u_6" class="t s2_6">MODIFICATION AU CONTRAT </span>
+<span id="t1v_6" class="t s3_6">Le présent contrat ne peut être modifié sauf si une telle modification est effectuée par écrit et signée par les parties. </span></div>
+<input id="form1_6" type="text" tabindex="114" value="" data-objref="1001 0 R" title="Tout diff&eacute;rend se rapportant &agrave; la validit&eacute;, la caducit&eacute;, la nullit&eacute;, l&#8217;interpr&eacute;tation, l&#8217;ex&eacute;cution, l&#8217;inex&eacute;cution, la prorogation, l&#8217;interruption, la" data-field-name="Tout différend se rapportant à la validité la caducité la nullité linterprétation lexécution linexécution la prorogation linterruption la"/>
+<input id="form2_6" type="text" tabindex="115" value="" data-objref="1002 0 R" title="En cas de dispute eu &eacute;gard aux dispositions du pr&eacute;sent contrat, la dispute sera soumise &agrave; l&#8217;arbitrage conform&eacute;ment aux r&egrave;gles et r&egrave;glements de" data-field-name="En cas de dispute eu égard aux dispositions du présent contrat la dispute sera soumise à larbitrage conformément aux règles et règlements de"/>
+<input id="form3_6" type="text" tabindex="113" value="" data-objref="1003 0 R" data-field-name="Texte1"/>
+
+
+</div>
+
+</div>
+</div>
+<div id="page7" style="width: 935px; height: 1210px; margin-top:20px;" class="page">
+<div class="page-inner" style="width: 935px; height: 1210px;">
+
+<div id="p7" class="pageArea" style="overflow: hidden; position: relative; width: 935px; height: 1210px; margin-top:auto; margin-left:auto; margin-right:auto; background-color: white;">
+<style class="shared-css" type="text/css" >
+.t {
+	transform-origin: bottom left;
+	z-index: 2;
+	position: absolute;
+	white-space: pre;
+	overflow: visible;
+	line-height: 1.5;
+}
+.text-container {
+	white-space: pre;
+}
+@supports (-webkit-touch-callout: none) {
+	.text-container {
+		white-space: normal;
+	}
+}
+</style>
+<style type="text/css" >
+
+#t1_7{left:50px;bottom:1139px;letter-spacing:-0.13px;}
+#t2_7{left:64px;bottom:1139px;}
+#t3_7{left:78px;bottom:1139px;letter-spacing:-0.14px;}
+#t4_7{left:81px;bottom:1095px;letter-spacing:-0.1px;}
+#t5_7{left:47px;bottom:1047px;letter-spacing:0.13px;}
+#t6_7{left:45px;bottom:999px;letter-spacing:0.13px;word-spacing:-0.21px;}
+#t7_7{left:45px;bottom:951px;letter-spacing:0.13px;}
+#t8_7{left:45px;bottom:876px;letter-spacing:0.13px;}
+#t9_7{left:43px;bottom:828px;letter-spacing:0.13px;word-spacing:-0.21px;}
+#ta_7{left:43px;bottom:780px;letter-spacing:0.13px;}
+#tb_7{left:490px;bottom:1047px;letter-spacing:0.14px;}
+#tc_7{left:488px;bottom:998px;letter-spacing:0.13px;word-spacing:-0.21px;}
+#td_7{left:488px;bottom:950px;letter-spacing:0.13px;}
+#te_7{left:488px;bottom:876px;letter-spacing:0.14px;}
+#tf_7{left:486px;bottom:827px;letter-spacing:0.13px;word-spacing:-0.21px;}
+#tg_7{left:486px;bottom:779px;letter-spacing:0.13px;}
+
+.s0_7{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#FFF;}
+.s1_7{font-size:14px;font-family:FrutigerLTStd-BlackCn_ts;color:#FFF;}
+.s2_7{font-size:14px;font-family:FrutigerLTStd-BlackCn_ts;color:#000;}
+.s3_7{font-size:14px;font-family:TimesNewRoman-Bold_u2;color:#000;}
+.s4_7{font-size:12px;font-family:TimesNewRoman_u5;color:#000;}
+#form1_7{	z-index: 2;	border-style: none;	padding: 0px;	position: absolute;	left: 46px;	top: 160px;	width: 403px;	height: 31px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	background-size: 100% 100%;	background-image: url("7/form/1053 0 ROff.png");	background-repeat: no-repeat;	font: normal 24px Arial, Helvetica, sans-serif;}
+#form2_7{	z-index: 2;	padding: 0px;	position: absolute;	left: 46px;	top: 208px;	width: 402px;	height: 29px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 24px Arial, Helvetica, sans-serif;}
+#form3_7{	z-index: 2;	border-style: none;	padding: 0px;	position: absolute;	left: 43px;	top: 332px;	width: 403px;	height: 30px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	background-size: 100% 100%;	background-image: url("7/form/1054 0 ROff.png");	background-repeat: no-repeat;	font: normal 24px Arial, Helvetica, sans-serif;}
+#form4_7{	z-index: 2;	padding: 0px;	position: absolute;	left: 43px;	top: 379px;	width: 402px;	height: 29px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 24px Arial, Helvetica, sans-serif;}
+#form5_7{	z-index: 2;	border-style: none;	padding: 0px;	position: absolute;	left: 489px;	top: 160px;	width: 403px;	height: 31px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	background-size: 100% 100%;	background-image: url("7/form/1052 0 ROff.png");	background-repeat: no-repeat;	font: normal 24px Arial, Helvetica, sans-serif;}
+#form6_7{	z-index: 2;	padding: 0px;	position: absolute;	left: 489px;	top: 209px;	width: 402px;	height: 29px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 24px Arial, Helvetica, sans-serif;}
+#form7_7{	z-index: 2;	border-style: none;	padding: 0px;	position: absolute;	left: 486px;	top: 332px;	width: 403px;	height: 30px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	background-size: 100% 100%;	background-image: url("7/form/1061 0 ROff.png");	background-repeat: no-repeat;	font: normal 24px Arial, Helvetica, sans-serif;}
+#form8_7{	z-index: 2;	padding: 0px;	position: absolute;	left: 486px;	top: 380px;	width: 402px;	height: 29px;	color: rgb(0,0,0);	text-align: left;	background: transparent;	border: none;	font: normal 24px Arial, Helvetica, sans-serif;}
+
+</style>
+<style id="fonts7" type="text/css" >
+
+@font-face {
+	font-family: FrutigerLTStd-BlackCn_ts;
+	src: url("fonts/FrutigerLTStd-BlackCn_ts.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman-Bold_u2;
+	src: url("fonts/TimesNewRoman-Bold_u2.woff") format("woff");
+}
+
+@font-face {
+	font-family: TimesNewRoman_u5;
+	src: url("fonts/TimesNewRoman_u5.woff") format("woff");
+}
+
+</style>
+<div id="pg7Overlay" style="width:100%; height:100%; position:absolute; z-index:1; background-color:rgba(0,0,0,0); -webkit-user-select: none;"></div>
+<div id="pg7" style="-webkit-user-select: none;"><object width="935" height="1210" data="7/7.svg" type="image/svg+xml" id="pdf7" style="width:935px; height:1210px; z-index: 0;"></object></div>
+<div class="text-container"><span id="t1_7" class="t s0_7">32</span><span id="t2_7" class="t s1_7">. </span><span id="t3_7" class="t s2_7">SIGNATURES </span>
+<span id="t4_7" class="t s3_7">EN FOI DE QUOI, les parties ont signé le présent à la première date inscrite ci-dessus. </span>
+<span id="t5_7" class="t s4_7">LE PROPRIÉTAIRE </span>
+<span id="t6_7" class="t s4_7">SIGNATURE AUTORISÉE </span>
+<span id="t7_7" class="t s4_7">NOM ET FONCTION </span>
+<span id="t8_7" class="t s4_7">LE PROPRIÉTAIRE </span>
+<span id="t9_7" class="t s4_7">SIGNATURE AUTORISÉE </span>
+<span id="ta_7" class="t s4_7">NOM ET FONCTION </span>
+<span id="tb_7" class="t s4_7">L’AGENT </span>
+<span id="tc_7" class="t s4_7">SIGNATURE AUTORISÉE </span>
+<span id="td_7" class="t s4_7">NOM ET FONCTION </span>
+<span id="te_7" class="t s4_7">L’AGENT </span>
+<span id="tf_7" class="t s4_7">SIGNATURE AUTORISÉE </span>
+<span id="tg_7" class="t s4_7">NOM ET FONCTION </span></div>
+<input id="form1_7" type="button" tabindex="116" data-objref="1053 0 R" title="SIGNATURE AUTORISÉE" data-field-name="SIGNATURE AUTORISÉE"/>
+<input id="form2_7" type="text" tabindex="118" value="" data-objref="1056 0 R" title="NOM ET FONCTION" data-field-name="NOM ET FONCTION"/>
+<input id="form3_7" type="button" tabindex="120" data-objref="1054 0 R" title="SIGNATURE AUTORISÉE" data-field-name="SIGNATURE AUTORISÉE_2"/>
+<input id="form4_7" type="text" tabindex="122" value="" data-objref="1055 0 R" title="NOM ET FONCTION" data-field-name="NOM ET FONCTION_2"/>
+<input id="form5_7" type="button" tabindex="117" data-objref="1052 0 R" title="SIGNATURE AUTORISÉE" data-field-name="SIGNATURE AUTORISÉE_3"/>
+<input id="form6_7" type="text" tabindex="119" value="" data-objref="1060 0 R" title="NOM ET FONCTION" data-field-name="NOM ET FONCTION_3"/>
+<input id="form7_7" type="button" tabindex="121" data-objref="1061 0 R" title="SIGNATURE AUTORISÉE" data-field-name="SIGNATURE AUTORISÉE_4"/>
+<input id="form8_7" type="text" tabindex="123" value="" data-objref="1057 0 R" title="NOM ET FONCTION" data-field-name="NOM ET FONCTION_4"/>
+<input type="hidden" name="page_html" id="page_html">
+
+</div>
+
+</div>
+</div>
+</div>
+<button type="button" onclick="submitForm()">Envoyer le PDF</button>
+
+</form>
+<div id="confirmation-message" style="margin-top: 20px; font-weight: bold;"></div>
+</div>
+<div id='FDFXFA_PDFDump' style='display:none;'>
+</div>
+<script src="config.js" type="text/javascript"></script>
+<script type="text/javascript">FormViewer.setup();</script>
+
+
+<!-- <script>
+  document.getElementById('page_html').value = document.documentElement.outerHTML;
+</script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        // Fonction d'envoi du formulaire
+        async function submitCourtageForm() {
+            const form = document.getElementById("courtageForm");
+            
+            // Options pour le PDF
+            const opt = {
+                margin: 10,
+                filename: 'contrat-courtage.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                // Afficher un loader
+                const btn = document.querySelector('.btn-submit');
+                btn.disabled = true;
+                btn.textContent = 'Génération du PDF...';
+
+                // 1. Générer le PDF
+                const pdfBlob = await html2pdf()
+                    .set(opt)
+                    .from(form)
+                    .toPdf()
+                    .output('blob');
+
+                // 2. Préparer les données
+                const formData = new FormData(form);
+                formData.append("pdf", pdfBlob, "contrat-courtage.pdf");
+
+                // 3. Envoyer au serveur
+                const response = await fetch("http://localhost:3000/submit-form", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert("Contrat envoyé avec succès !");
+                } else {
+                    alert("Erreur: " + (result.error || "Échec d'envoi"));
+                }
+            } catch (error) {
+                console.error("Erreur complète:", error);
+                alert("Erreur lors de la génération ou de l'envoi");
+            } finally {
+                // Réactiver le bouton
+                const btn = document.querySelector('.btn-submit');
+                btn.disabled = false;
+                btn.textContent = 'Envoyer le contrat';
+            }
+        }
+
+        // Gestion des champs de rémunération
+        document.getElementById('remuneration_percent').addEventListener('change', function() {
+            document.getElementById('remuneration_percent_value').disabled = !this.checked;
+            document.getElementById('remuneration_fixed_value').disabled = this.checked;
+        });
+
+        document.getElementById('remuneration_fixed').addEventListener('change', function() {
+            document.getElementById('remuneration_percent_value').disabled = this.checked;
+            document.getElementById('remuneration_fixed_value').disabled = !this.checked;
+        });
+
+        // Gestion des cases à cocher pour les pièces d'identité
+        const vendeur1Pieces = document.querySelectorAll('input[name="vendeur1_piece"]');
+        vendeur1Pieces.forEach(piece => {
+            piece.addEventListener('change', function() {
+                if(this.checked) {
+                    vendeur1Pieces.forEach(p => {
+                        if(p !== this) p.checked = false;
+                    });
+                }
+            });
+        });
+        
+        const vendeur2Pieces = document.querySelectorAll('input[name="vendeur2_piece"]');
+        vendeur2Pieces.forEach(piece => {
+            piece.addEventListener('change', function() {
+                if(this.checked) {
+                    vendeur2Pieces.forEach(p => {
+                        if(p !== this) p.checked = false;
+                    });
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

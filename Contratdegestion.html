@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulaire - Contrat de gestion immobilière</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f8fa;
+      padding: 30px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #004080;
+    }
+
+    form {
+      background-color: #fff;
+      padding: 25px;
+      max-width: 900px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+    }
+
+    fieldset {
+      margin-bottom: 30px;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+
+    legend {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #0056b3;
+      padding: 0 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: #fff;
+      box-sizing: border-box;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+
+    .btn-submit {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 25px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: block;
+      margin: 30px auto 0;
+    }
+
+    .btn-submit:hover {
+      background-color: #0056b3;
+    }
+
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .flex-50 {
+      flex: 1 1 48%;
+    }
+
+     .signature-box {
+      border: 1px dashed #999;
+      height: 100px;
+      margin-top: 10px;
+      background-color: #f9f9f9;
+    }
+
+    .signature-pad-container {
+      border: 1px solid #ccc;
+      width: 100%;
+      height: 150px;
+      background-color: #fff;
+      margin-top: 10px;
+    }
+
+    .signature-pad {
+      width: 100%;
+      height: 100%;
+      background-color: #fff;
+    }
+
+
+    @media print {
+      body {
+        visibility: hidden;
+      }
+      #gestionForm {
+        visibility: visible;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Contrat de gestion immobilière</h1>
+  <form id="gestionForm">
+    <input type="hidden" name="_to" value="info@keurgui.sn">
+    <input type="hidden" name="_subject" value="Nouveau contrat de gestion immobilière - Keurgui">
+    
+    <fieldset>
+      <legend>Identification de l'agence</legend>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Nom de l'agence:</label>
+          <input type="text" name="nom_agence" required>
+        </div>
+        <div class="flex-50">
+          <label>Représenté par:</label>
+          <input type="text" name="representant_agence" required>
+        </div>
+      </div>
+      <label>Adresse, téléphone, courriel:</label>
+      <textarea name="coordonnees_agence" required></textarea>
+      <label><input type="checkbox" name="societe_agence"> Exerce au sein de la société</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Locateur 1</legend>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Nom:</label>
+          <input type="text" name="loc1_nom" required>
+        </div>
+        <div class="flex-50">
+          <label>Adresse:</label>
+          <input type="text" name="loc1_adresse" required>
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Téléphone:</label>
+          <input type="text" name="loc1_tel" required>
+        </div>
+        <div class="flex-50">
+          <label>Courriel:</label>
+          <input type="email" name="loc1_email">
+        </div>
+      </div>
+      <label>Représentant (si applicable):</label>
+      <input type="text" name="loc1_representant">
+      <label>Type de pièce:</label>
+      <label><input type="checkbox" name="loc1_piece" value="CNI"> Carte d'identité</label>
+      <label><input type="checkbox" name="loc1_piece" value="Passeport"> Passeport</label>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Numéro de la pièce:</label>
+          <input type="text" name="loc1_num_piece">
+        </div>
+        <div class="flex-50">
+          <label>Date d'expiration:</label>
+          <input type="date" name="loc1_expiration">
+        </div>
+      </div>
+      <label>Région et pays de délivrance:</label>
+      <input type="text" name="loc1_region_pays">
+      <label>Date de naissance:</label>
+      <input type="date" name="loc1_dnaissance">
+      <label>Profession / Activité principale:</label>
+      <input type="text" name="loc1_profession">
+      <label>Lien avec le représentant (si applicable):</label>
+      <input type="text" name="loc1_lien">
+    </fieldset>
+
+    <fieldset>
+      <legend>Articles du contrat</legend>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Durée minimale de location (mois):</label>
+          <input type="text" name="duree_min" required>
+        </div>
+        <div class="flex-50">
+          <label>Durée maximale de location (mois):</label>
+          <input type="text" name="duree_max" required>
+        </div>
+      </div>
+      <label>Budget max publicité (trimestriel):</label>
+      <input type="text" name="pub_budget">
+      <label>Dépenses max sans accord préalable:</label>
+      <input type="text" name="depense_max">
+      <label>Délai de remboursement des salaires (jours):</label>
+      <input type="text" name="remb_salaire_delai">
+      <label>Montant assurance responsabilité:</label>
+      <input type="text" name="assurance_responsabilite">
+      <label>Montant assurance incendie:</label>
+      <input type="text" name="assurance_incendie">
+      <label>Montant assurance employés:</label>
+      <input type="text" name="assurance_employes">
+      <label>Banque du compte de réserve:</label>
+      <input type="text" name="banque_reserve">
+      <label>Délai pour rapport mensuel (jours):</label>
+      <input type="text" name="rapport_mensuel">
+      <label>Délai de remise des documents à la fin du contrat:</label>
+      <input type="text" name="remise_documents">
+      <label>Pourcentage honoraires de gestion:</label>
+      <input type="text" name="honoraires" required>
+      <label>Délai de paiement des honoraires (jours):</label>
+      <input type="text" name="delai_paiement">
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Numéro du bureau réservé:</label>
+          <input type="text" name="bureau_numero">
+        </div>
+        <div class="flex-50">
+          <label>Étage du bureau réservé:</label>
+          <input type="text" name="bureau_etage">
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Date de début du contrat:</label>
+          <input type="date" name="date_debut" required>
+        </div>
+        <div class="flex-50">
+          <label>Date de fin du contrat:</label>
+          <input type="date" name="date_fin" required>
+        </div>
+      </div>
+      <label>Délai de notification pour fin de contrat (jours):</label>
+      <input type="text" name="delai_resiliation">
+      <label>Délai pour corriger une violation (jours):</label>
+      <input type="text" name="delai_violation">
+      <label>Seuil de réduction des revenus pour résiliation (%):</label>
+      <input type="text" name="seuil_reduction">
+      <label>Délai de notification en cas de faillite (jours):</label>
+      <input type="text" name="delai_faillite">
+      <label>Droit applicable:</label>
+      <input type="text" name="droit_applicable">
+      <label>Organisme d'arbitrage:</label>
+      <input type="text" name="arbitrage">
+    </fieldset>
+
+    <fieldset>
+      <legend>Signatures</legend>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Nom et fonction du Propriétaire:</label>
+          <input type="text" name="nom_proprietaire" required>
+        </div>
+        <div class="flex-50">
+          <label>Signature autorisée du Propriétaire:</label>
+          <div id="signature-pad-owner" class="signature-pad-container">
+<canvas class="signature-canvas" width="400" height="100" style="border: 1px dashed #999;"></canvas>
+    <button type="button" onclick="clearSignature(this)">Effacer</button>          </div>
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Nom et fonction de l'Agent:</label>
+          <input type="text" name="nom_agent" required>
+        </div>
+        <div class="flex-50">
+          <label>Signature autorisée de l'Agent:</label>
+          <div id="signature-pad-agent" class="signature-pad-container">
+<canvas class="signature-canvas" width="400" height="100" style="border: 1px dashed #999;"></canvas>
+    <button type="button" onclick="clearSignature(this)">Effacer</button>          </div>
+        </div>
+      </div>
+      <div class="flex-row">
+        <div class="flex-50">
+          <label>Lieu de signature:</label>
+          <input type="text" name="lieu_signature" required>
+        </div>
+        <div class="flex-50">
+          <label>Date de signature:</label>
+          <input type="date" name="date_signature" required>
+        </div>
+      </div>
+      
+    </fieldset>
+
+    <button type="button" onclick="submitGestionForm()" class="btn-submit">Envoyer le contrat</button>
+  </form>
+
+    <script>
+          const signaturePads = [];
+
+    document.querySelectorAll('.signature-canvas').forEach((canvas) => {
+        const signaturePad = new SignaturePad(canvas);
+        signaturePads.push(signaturePad);
+    });
+
+    function clearSignature(button) {
+        const canvas = button.previousElementSibling;
+        const pad = signaturePads.find(p => p.canvas === canvas);
+        if (pad) pad.clear();
+    }
+
+    function getSignatureImages() {
+        return signaturePads.map(pad => pad.isEmpty() ? null : pad.toDataURL());
+    }
+        // Fonction d'envoi du formulaire
+        async function submitGestionForm() {
+            const form = document.getElementById("gestionForm");
+            
+            // Options pour le PDF
+            const opt = {
+                margin: 10,
+                filename: 'contrat-courtage.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    scrollX: 0,
+                    scrollY: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                    // Afficher un loader
+                    const btn = document.querySelector('.btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Envoie en cours...';
+    btn.classList.add('hide-in-pdf'); // Empêche l'apparition dans le PDF
+
+
+                // 1. Générer le PDF
+                const pdfBlob = await html2pdf()
+                    .set(opt)
+                    .from(form)
+                    .toPdf()
+                    .output('blob');
+
+                // 2. Préparer les données
+                const formData = new FormData(form);
+                formData.append("pdf", pdfBlob, "contrat-courtage.pdf");
+
+                // 3. Envoyer au serveur
+                const response = await fetch("http://localhost:3000/submit-form", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert("Contrat envoyé avec succès !");
+                } else {
+                    alert("Erreur: " + (result.error || "Échec d'envoi"));
+                }
+            } catch (error) {
+                console.error("Erreur complète:", error);
+                alert("Erreur lors de la génération ou de l'envoi");
+            } finally {
+                // Réactiver le bouton
+                const btn = document.querySelector('.btn-submit');
+                btn.disabled = false;
+                btn.textContent = 'Envoyer le contrat';
+            }
+        }
+
+        // Gestion des champs de rémunération
+        document.getElementById('remuneration_percent').addEventListener('change', function() {
+            document.getElementById('remuneration_percent_value').disabled = !this.checked;
+            document.getElementById('remuneration_fixed_value').disabled = this.checked;
+        });
+
+        document.getElementById('remuneration_fixed').addEventListener('change', function() {
+            document.getElementById('remuneration_percent_value').disabled = this.checked;
+            document.getElementById('remuneration_fixed_value').disabled = !this.checked;
+        });
+
+        // Gestion des cases à cocher pour les pièces d'identité
+        const vendeur1Pieces = document.querySelectorAll('input[name="vendeur1_piece"]');
+        vendeur1Pieces.forEach(piece => {
+            piece.addEventListener('change', function() {
+                if(this.checked) {
+                    vendeur1Pieces.forEach(p => {
+                        if(p !== this) p.checked = false;
+                    });
+                }
+            });
+        });
+        
+        const vendeur2Pieces = document.querySelectorAll('input[name="vendeur2_piece"]');
+        vendeur2Pieces.forEach(piece => {
+            piece.addEventListener('change', function() {
+                if(this.checked) {
+                    vendeur2Pieces.forEach(p => {
+                        if(p !== this) p.checked = false;
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

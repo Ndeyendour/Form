@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Formulaire à PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        #sendBtn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Formulaire -->
+   <form id="myForm">
+  <input type="text" name="nom" placeholder="Nom" required>
+  <input type="email" name="email" placeholder="Email" required>
+  <textarea name="message" placeholder="Message" required></textarea>
+  <button type="button" onclick="submitForm()">Envoyer le PDF</button>
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+  async function submitForm() {
+    const form = document.getElementById("myForm");
+    
+    // 1. Générer le PDF en mémoire
+    const pdfBlob = await html2pdf()
+      .from(form)
+      .toPdf()
+      .output('blob');
+
+    // 2. Préparer les données
+    const formData = new FormData(form);
+    formData.append("pdf", pdfBlob, "formulaire.pdf");
+
+    // 3. Envoyer au serveur
+    try {
+      const response = await fetch("http://localhost:3000/submit-form", {
+        method: "POST",
+        body: formData  // Pas besoin de Content-Type
+      });
+      
+      const result = await response.json();
+      alert(result.message || result.error);
+    } catch (error) {
+      alert("Erreur réseau: " + error);
+    }
+  }
+</script>
+</body>
+</html>

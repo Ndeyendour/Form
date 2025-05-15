@@ -18,6 +18,9 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB max
 });
+app.get('/', (req, res) => {
+    res.send('Backend déployé avec succès 🎉');
+});
 
 // Route pour recevoir le PDF
 app.post('/submit-form', upload.single('pdf'), async (req, res) => {

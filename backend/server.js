@@ -61,7 +61,7 @@ app.post('/submit-form', upload.single('pdf'), async (req, res) => {
             to: process.env.EMAIL_TO,
             subject: `Nouveau contrat de ${formData.agence_nom || 'Agence inconnue'}`,
             attachments: [{
-                filename: "contrat-courtage.pdf",
+                filename: "Keurgui-contrat-courtage.pdf",
                 content: pdfBuffer
             }]
         });
@@ -76,7 +76,59 @@ app.post('/submit-form', upload.single('pdf'), async (req, res) => {
         });
     }
 });
+app.post('/send-form', upload.single('pdf'), async (req, res) => {
+    try {
+        // Vérifier le PDF
+        if (!req.file) {
+            return res.status(400).json({ error: "Aucun PDF reçu" });
+        }
 
+        // Récupérer toutes les données
+        const formData = req.body;
+        const pdfBuffer = req.file.buffer;
+
+        // Configuration email
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            },
+            tls: {
+                servername: 'smtp.gmail.com'
+            }
+        });
+
+        // Construire le contenu textuel
+        let textContent = "Détails du contrat:\n\n";
+        for (const [key, value] of Object.entries(formData)) {
+            if (value) textContent += `${key}: ${value}\n`;
+        }
+
+        // Envoyer l'email
+        await transporter.sendMail({
+            from: `"Contrats Keurgui" <${process.env.EMAIL_USER}>`,
+            to: process.env.EMAIL_TO,
+            subject: `Nouveau contrat de ${formData.agence_nom || 'Agence inconnue'}`,
+            attachments: [{
+                filename: "Keurgui-Contrat-de-gestion-immobilière.pdf",
+                content: pdfBuffer
+            }]
+        });
+
+        res.json({ success: true, message: "Contrat reçu et envoyé" });
+
+    } catch (error) {
+        console.error("Erreur serveur:", error);
+        res.status(500).json({ 
+            error: "Erreur serveur",
+            details: error.message 
+        });
+    }
+});
 // Démarrer le serveur
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
